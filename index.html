@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Kid - Hug Dee Home Clinic</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- Google Fonts: Kanit -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Kanit', sans-serif; background-color: #f8fafc; }
+    
+    /* SweetAlert2 Styles */
+    .swal2-container { font-family: 'Kanit', sans-serif !important; }
+    .swal2-popup { border-radius: 1.5rem !important; padding: 1.5rem !important; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important; }
+    .swal2-title { font-weight: 600 !important; color: #1e293b !important; font-size: 1.5rem !important; }
+    .swal2-html-container { color: #64748b !important; font-size: 0.95rem !important; margin-top: 0.5rem !important; }
+    .swal2-confirm { border-radius: 0.75rem !important; font-weight: 500 !important; padding: 0.6rem 1.5rem !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; }
+    
+    /* Print Styles - แก้ไขให้สามารถเลื่อนพิมพ์ได้หลายหน้า */
+    @media print {
+      @page { size: A4 portrait; margin: 15mm 10mm; }
+      /* ปลดล็อกความสูงของโครงสร้างหลักทั้งหมดตอนพิมพ์ */
+      html, body, #root { height: auto !important; min-height: 100% !important; overflow: visible !important; display: block !important; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; font-family: 'Kanit', sans-serif; }
+      .print-preview-container { padding: 0 !important; box-shadow: none !important; max-width: none !important; margin: 0 !important; }
+      .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      ::-webkit-scrollbar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- จุดที่ React จะนำหน้าเว็บมาแสดงผล -->
+  <div id="root"></div>
+
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Fix สำหรับ Lucide React UMD ที่หา global.react ไม่เจอ -->
+  <script>window.react = window.React;</script>
+  
+  <!-- Babel (สำหรับแปลภาษา JSX ให้เบราว์เซอร์อ่านออก) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- เปลี่ยนมาใช้ jsdelivr เพื่อความเสถียรที่มากขึ้น -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+
+  <!-- โค้ดระบบคลินิกทั้งหมด -->
+  <script type="text/babel">
+    // ดึงฟังก์ชันของ React
+    const { useState, useEffect, useMemo } = React;
+    
+    // ดึงไอคอนจาก Lucide อย่างปลอดภัย (ป้องกันแอปล่มกรณีโหลดไอคอนไม่สำเร็จ)
+    const lucide = window.LucideReact || window.lucideReact || window.lucide || {};
+    const FallbackIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+    const getIcon = (name) => lucide[name] || FallbackIcon;
+
+    const LayoutDashboard = getIcon('LayoutDashboard');
+    const Users = getIcon('Users');
+    const ClipboardList = getIcon('ClipboardList');
+    const FolderOpen = getIcon('FolderOpen');
+    const PieChart = getIcon('PieChart');
+    const LogOut = getIcon('LogOut');
+    const Menu = getIcon('Menu');
+    const X = getIcon('X');
+    const Plus = getIcon('Plus');
+    const Search = getIcon('Search');
+    const Activity = getIcon('Activity');
+    const UserPlus = getIcon('UserPlus');
+    const Calendar = getIcon('Calendar');
+    const FileText = getIcon('FileText');
+    const Loader2 = getIcon('Loader2');
+    const UploadCloud = getIcon('UploadCloud');
+    const Languages = getIcon('Languages');
+    const Edit = getIcon('Edit');
+    const Edit2 = getIcon('Edit2');
+    const Trash2 = getIcon('Trash2');
+    const ChevronRight = getIcon('ChevronRight');
+    const Printer = getIcon('Printer');
+    const Eye = getIcon('Eye');
+    const EyeOff = getIcon('EyeOff');
+    const ChevronLeft = getIcon('ChevronLeft');
+    const Package = getIcon('Package');
+    const Clock = getIcon('Clock');
+    const Filter = getIcon('Filter');
+    const RefreshCw = getIcon('RefreshCw'); // เพิ่มปุ่มไอคอน Refresh
+
+    // --- Configuration & Translations ---
+    const THEME = {
+      primary: '#eec676',
+      primaryHover: '#dcb360',
+      bg: '#f8fafc',
+      surface: '#ffffff',
+      text: '#1e293b',
+      textLight: '#64748b'
+    };
+
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyOa6uYwxadjHzw3uXGNbk0QxNBSc35ZWeX0kgYg-F5M8qMEYo9xx6Y52EMCXn5UiEd/exec";
+
+    const DICT = {
+      th: {
+        login_title: 'ยินดีต้อนรับ',
+        login_sub: 'เข้าสู่ระบบ My Kid',
+        username: 'ชื่อผู้ใช้ / รหัส (HN)',
+        password: 'รหัสผ่าน / เบอร์โทร',
+        signin: 'เข้าสู่ระบบ',
+        auth_ing: 'กำลังตรวจสอบ...',
+        quick_demo: 'ทดสอบเข้าสู่ระบบแบบด่วน',
+        dashboard: 'แดชบอร์ด',
+        patients: 'จัดการผู้รับบริการ',
+        opd: 'ประวัติการรับบริการ',
+        files: 'อัปโหลดไฟล์ (Drive)',
+        reports: 'รายงาน',
+        logout: 'ออกจากระบบ',
+        total_patients: 'ผู้รับบริการทั้งหมด',
+        active_cases: 'เคสที่กำลังรับบริการ',
+        pending_cases: 'รอดำเนินการ',
+        search_patient: 'ค้นหา HN, ชื่อ, ชื่อเล่น...',
+        add_patient: 'เพิ่มผู้รับบริการ',
+        edit_patient: 'แก้ไขข้อมูล',
+        hn: 'รหัส (HN)',
+        patient_info: 'ข้อมูลผู้รับบริการ',
+        status: 'สถานะ',
+        contact: 'การติดต่อ',
+        actions: 'จัดการ',
+        view_details: 'ดูประวัติ',
+        save: 'บันทึกข้อมูล',
+        cancel: 'ยกเลิก',
+        add_record: 'บันทึกประวัติใหม่',
+        therapist: 'นักกิจกรรมบำบัด',
+        details: 'รายละเอียดอาการ/การรักษา',
+        attachment: 'แนบไฟล์ (ถ้ามี)',
+        uploading: 'กำลังอัปโหลด...',
+        upload: 'อัปโหลดไฟล์ไปยัง Drive',
+        select_patient: '-- กรุณาเลือกผู้รับบริการ --',
+        no_data: 'ไม่พบข้อมูล',
+        save_success: 'บันทึกสำเร็จ!',
+        error: 'เกิดข้อผิดพลาด',
+        date: 'วัน/เดือน/ปี',
+        loading: 'กำลังโหลดข้อมูล...',
+        upload_success: 'อัปโหลดไฟล์สำเร็จ',
+        file_manager: 'ระบบอัปโหลดไฟล์ผู้รับบริการเข้า Google Drive',
+        stats_report: 'รายงานสถิติผู้รับบริการ',
+        general_info: 'ข้อมูลทั่วไป / อาการเบื้องต้น',
+        gender: 'เพศ',
+        male: 'ชาย',
+        female: 'หญิง',
+        dob: 'วันเกิด',
+        age: 'อายุ',
+        print_blank: 'พิมพ์ OPD เปล่า',
+        print_form: 'พิมพ์ OPD ผู้รับบริการ',
+        print_filled: 'พิมพ์ประวัติผู้รับบริการ',
+        visibility: 'อนุญาตให้ผู้ปกครองเห็น',
+        visible_desc: 'ผู้ปกครองสามารถดูประวัตินี้ได้',
+        hidden_desc: 'ซ่อนประวัตินี้จากผู้ปกครอง',
+        total_courses: 'คอร์สที่ซื้อทั้งหมด (ครั้ง)',
+        used_courses: 'จำนวนครั้งที่เข้ารับบริการแล้ว',
+        remaining_courses: 'จำนวนครั้งคงเหลือ',
+        service_history: 'ประวัติการเข้ารับบริการ',
+        view_opd: 'ดูข้อมูลการรับบริการ (OPD)'
+      },
+      en: {
+        login_title: 'Welcome Back',
+        login_sub: 'Sign in to My Kid',
+        username: 'Username / HN',
+        password: 'Password / Phone',
+        signin: 'Sign In',
+        auth_ing: 'Authenticating...',
+        quick_demo: 'Quick Demo Logins',
+        dashboard: 'Dashboard',
+        patients: 'Clients',
+        opd: 'Service History',
+        files: 'Upload Files',
+        reports: 'Reports',
+        logout: 'Logout',
+        total_patients: 'Total Clients',
+        active_cases: 'Active Cases',
+        pending_cases: 'Pending Cases',
+        search_patient: 'Search HN, Name, Nickname...',
+        add_patient: 'Add Client',
+        edit_patient: 'Edit Client',
+        hn: 'HN',
+        patient_info: 'Client Info',
+        status: 'Status',
+        contact: 'Contact',
+        actions: 'Actions',
+        view_details: 'View History',
+        save: 'Save Changes',
+        cancel: 'Cancel',
+        add_record: 'Add New Record',
+        therapist: 'Occupational Therapist',
+        details: 'Treatment Details',
+        attachment: 'Attachment (Optional)',
+        uploading: 'Uploading...',
+        upload: 'Upload to Drive',
+        select_patient: '-- Select a Client --',
+        no_data: 'No data found',
+        save_success: 'Saved successfully!',
+        error: 'An error occurred',
+        date: 'Date',
+        loading: 'Loading data...',
+        upload_success: 'File uploaded successfully',
+        file_manager: 'Google Drive File Upload System',
+        stats_report: 'Client Statistics',
+        general_info: 'General Info / Symptoms',
+        gender: 'Gender',
+        male: 'Male',
+        female: 'Female',
+        dob: 'Date of Birth',
+        age: 'Age',
+        print_blank: 'Print Blank OPD',
+        print_form: 'Print Client OPD',
+        print_filled: 'Print Service Record',
+        visibility: 'Visible to Parent',
+        visible_desc: 'Parents can see this record',
+        hidden_desc: 'Hidden from parents',
+        total_courses: 'Total Courses Purchased',
+        used_courses: 'Sessions Attended',
+        remaining_courses: 'Sessions Remaining',
+        service_history: 'Service History',
+        view_opd: 'View OPD Record'
+      }
+    };
+
+    // --- Helper Functions สำหรับจัดการวันที่ให้แม่นยำ ---
+    const formatThaiDate = (dateStr) => {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      if (isNaN(date)) return dateStr;
+      const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      let year = date.getFullYear();
+      if (year < 2500) {
+        year += 543;
+      }
+      return `${date.getDate()} ${months[date.getMonth()]} ${year}`;
+    };
+
+    const formatDateForInput = (dateStr) => {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      if (isNaN(date)) return '';
+      let year = date.getFullYear();
+      if (year > 2500) year -= 543;
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${year}-${m}-${d}`;
+    };
+
+    const normalizeDate = (dateStr) => {
+      if (!dateStr) return '';
+      const dt = new Date(dateStr);
+      if (isNaN(dt)) return '';
+      let y = dt.getFullYear();
+      if (y > 2500) y -= 543;
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const formatImageUrl = (url) => {
+      if (!url) return '';
+      if (url.includes('drive.google.com/file/d/')) {
+        const match = url.match(/\/d\/(.+?)\//);
+        if (match && match[1]) {
+          return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+        }
+      }
+      return url;
+    };
+
+    // --- API Utility ---
+    const fetchGAS = async (action, payload = {}) => {
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, payload })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || "Unknown API Error");
+        return result.data;
+      } catch (error) {
+        // เพิ่ม "ไม่ได้ใช้บริการ" เพื่อซ่อน Console Error สีแดง แต่จะยังโยน Error ให้หน้าจอแสดงผลได้ตามปกติ
+        const isLoginError = error.message.includes("Invalid credentials") || error.message.includes("ไม่ถูกต้อง") || error.message.includes("ไม่ได้ใช้บริการ");
+        const isActionError = error.message.includes("Invalid action");
+        
+        if (!isLoginError && !isActionError) {
+          console.error(`GAS API Error [${action}]:`, error);
+        }
+        throw error;
+      }
+    };
+
+    const uploadBase64ToGAS = (file, patientData) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Data = reader.result.split(',')[1];
+          try {
+            const res = await fetchGAS('uploadFile', {
+              hn: patientData.HN,
+              name: patientData.Name,
+              lastname: patientData.LastName,
+              fileName: file.name,
+              mimeType: file.type,
+              base64Data: base64Data
+            });
+            resolve(res);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error('File reading failed'));
+        reader.readAsDataURL(file);
+      });
+    };
+
+    // --- Main App Component ---
+    function App() {
+      const [user, setUser] = useState(null);
+      const [route, setRoute] = useState('login');
+      const [isSidebarOpen, setSidebarOpen] = useState(false);
+      const [isCollapsed, setIsCollapsed] = useState(false); 
+      const [lang, setLang] = useState('th');
+      
+      const [globalPatients, setGlobalPatients] = useState([]);
+      const [clinicConfig, setClinicConfig] = useState(null);
+      const [loadingGlobal, setLoadingGlobal] = useState(false);
+      const [refreshTrigger, setRefreshTrigger] = useState(0); // ควบคุมการ Refresh ข้อมูล
+
+      const t = DICT[lang];
+
+      useEffect(() => {
+        fetchGAS('getConfig')
+          .then(data => setClinicConfig(data))
+          .catch(err => {
+            if (err && err.message && !err.message.includes('Invalid action')) {
+              console.error("Failed to load config:", err);
+            }
+          });
+      }, []);
+
+      const refreshGlobalPatients = async (currentUser) => {
+        if (currentUser.role === 'parent') return;
+        
+        setLoadingGlobal(true);
+        try {
+          const data = await fetchGAS('getPatients', { role: currentUser.role, username: currentUser.username });
+          setGlobalPatients(Array.isArray(data) ? data : []);
+          
+          const configData = await fetchGAS('getConfig').catch(() => null);
+          if (configData) setClinicConfig(configData);
+        } catch (err) {
+          // 
+        } finally {
+          setLoadingGlobal(false);
+        }
+      };
+
+      // ฟังก์ชันเมื่อกดปุ่ม Refresh ด้านบน
+      const handleGlobalRefresh = () => {
+        setRefreshTrigger(prev => prev + 1);
+        if (user && user.role !== 'parent') {
+          refreshGlobalPatients(user);
+        }
+      };
+
+      const handleLogin = (userData) => {
+        setUser(userData);
+        setRoute('dashboard');
+        refreshGlobalPatients(userData);
+        if (window.Swal) {
+          window.Swal.fire({
+            title: lang === 'th' ? 'เข้าสู่ระบบสำเร็จ!' : 'Welcome!',
+            text: `${userData.name}`,
+            icon: 'success',
+            confirmButtonColor: THEME.primary,
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      };
+
+      const navigateToOPD = (hn) => {
+        setRoute(`opd:${hn}`);
+        setSidebarOpen(false);
+      };
+
+      if (route === 'login' || !user) {
+        return <LoginView onLogin={handleLogin} lang={lang} setLang={setLang} t={t} clinicConfig={clinicConfig} />;
+      }
+
+      const baseRoute = route.split(':')[0];
+      const sidebarWidth = isCollapsed ? 'w-20' : 'w-64';
+
+      return (
+        <div className="flex h-screen overflow-hidden font-sans print:h-auto print:overflow-visible print:block" style={{ fontFamily: "'Kanit', sans-serif", backgroundColor: THEME.bg }}>
+          
+          <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 ${sidebarWidth} bg-white shadow-xl transition-all duration-300 ease-in-out flex flex-col print:hidden`}>
+            <button onClick={() => setIsCollapsed(!isCollapsed)} className="absolute -right-3 top-8 bg-white border border-gray-200 rounded-full p-1.5 shadow-sm hidden lg:flex items-center justify-center z-50 hover:bg-gray-50 hover:text-[#dcb360] transition-colors text-gray-500">
+               {isCollapsed ? <ChevronRight size={14} strokeWidth={3} /> : <ChevronLeft size={14} strokeWidth={3} />}
+            </button>
+
+            <div className={`flex items-center p-5 cursor-pointer ${isCollapsed ? 'justify-center' : 'justify-between'}`} onClick={() => setRoute('dashboard')}>
+              <div className="flex items-center gap-3 w-full overflow-hidden">
+                {clinicConfig?.LogoUrl ? (
+                   <img src={formatImageUrl(clinicConfig.LogoUrl)} alt="Logo" className="w-10 h-10 object-contain rounded-full shadow-sm bg-white shrink-0" />
+                ) : (
+                   <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg" style={{ backgroundColor: THEME.primary }}>C</div>
+                )}
+                {!isCollapsed && (
+                  <div className="flex flex-col justify-center truncate">
+                    {clinicConfig?.ClinicName?.includes('บ้านฮักดี') ? (
+                      <React.Fragment>
+                        <span className="text-[14px] leading-tight font-bold text-gray-800">คลินิกพัฒนาการเด็ก</span>
+                        <span className="text-[14px] leading-tight font-bold text-[#eec676]">บ้านฮักดี</span>
+                      </React.Fragment>
+                    ) : (
+                      <span className="text-[15px] leading-tight font-bold text-gray-800 truncate" title={clinicConfig?.ClinicName || 'ClinicCare'}>
+                        {clinicConfig?.ClinicName || 'ClinicCare'}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {!isCollapsed && <button className="lg:hidden text-gray-500 shrink-0 ml-2" onClick={(e) => { e.stopPropagation(); setSidebarOpen(false); }}><X size={24} /></button>}
+            </div>
+            
+            <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
+              <NavItem icon={<LayoutDashboard />} label={t.dashboard} active={baseRoute === 'dashboard'} isCollapsed={isCollapsed} onClick={() => {setRoute('dashboard'); setSidebarOpen(false);}} />
+              
+              {user.role !== 'parent' && (
+                <React.Fragment>
+                  <NavItem icon={<Users />} label={t.patients} active={baseRoute === 'patients'} isCollapsed={isCollapsed} onClick={() => {setRoute('patients'); setSidebarOpen(false);}} />
+                  <NavItem icon={<ClipboardList />} label={t.opd} active={baseRoute === 'opd'} isCollapsed={isCollapsed} onClick={() => {setRoute('opd'); setSidebarOpen(false);}} />
+                </React.Fragment>
+              )}
+
+              {(user.role === 'admin' || user.role === 'staff' || user.role === 'employee') && (
+                <React.Fragment>
+                  <NavItem icon={<UploadCloud />} label={t.files} active={baseRoute === 'files'} isCollapsed={isCollapsed} onClick={() => {setRoute('files'); setSidebarOpen(false);}} />
+                  <NavItem icon={<PieChart />} label={t.reports} active={baseRoute === 'reports'} isCollapsed={isCollapsed} onClick={() => {setRoute('reports'); setSidebarOpen(false);}} />
+                </React.Fragment>
+              )}
+            </nav>
+
+            <div className="p-4 border-t border-gray-100">
+              <div className={`flex items-center bg-gray-50 rounded-xl ${isCollapsed ? 'justify-center p-2' : 'gap-3 px-4 py-3'}`}>
+                <div className="w-10 h-10 shrink-0 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600 uppercase" title={user.name}>{user.name.charAt(0)}</div>
+                {!isCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  </div>
+                )}
+                {!isCollapsed && (
+                  <button onClick={() => {setUser(null); setRoute('login');}} className="text-gray-400 hover:text-red-500 transition-colors shrink-0" title={t.logout}>
+                    <LogOut size={18} />
+                  </button>
+                )}
+              </div>
+              {isCollapsed && (
+                 <button onClick={() => {setUser(null); setRoute('login');}} className="w-full mt-2 flex justify-center text-gray-400 hover:text-red-500 transition-colors p-2" title={t.logout}>
+                   <LogOut size={18} />
+                 </button>
+              )}
+            </div>
+          </aside>
+
+          <main className="flex-1 flex flex-col h-screen overflow-hidden relative print:h-auto print:overflow-visible print:block">
+            <header className="bg-white shadow-sm z-40 relative print:hidden">
+              <div className="flex items-center justify-between px-6 py-4">
+                <div className="flex items-center gap-4">
+                  <button className="lg:hidden text-gray-500 hover:text-gray-800 transition-colors" onClick={() => setSidebarOpen(true)}><Menu size={24} /></button>
+                  <div className="hidden lg:block text-xl font-semibold text-gray-800 capitalize">
+                    {t[baseRoute] || baseRoute}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-4">
+                  
+                  {/* ปุ่ม Refresh ถูกเพิ่มเข้ามาตรงนี้เพื่อให้อยู่ทุกหน้า */}
+                  <button 
+                    onClick={handleGlobalRefresh}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-[#eec676] hover:text-white transition-colors"
+                    title="รีเฟรชข้อมูลล่าสุด"
+                  >
+                    <RefreshCw size={16} className={loadingGlobal ? "animate-spin text-[#dcb360]" : ""} /> 
+                    <span className="hidden sm:inline">{lang === 'th' ? 'รีเฟรช' : 'Refresh'}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-[#eec676] hover:text-white transition-colors"
+                  >
+                    <Languages size={16} /> {lang === 'th' ? 'TH' : 'EN'}
+                  </button>
+                  <span className="text-sm text-gray-500 hidden md:inline-block">
+                    {new Date().toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-4 lg:p-8 bg-[#f8fafc] print:overflow-visible print:bg-white print:p-0 print:block print:h-auto">
+              {loadingGlobal && baseRoute !== 'patients' && user.role !== 'parent' && (
+                <div className="absolute top-4 right-4 bg-white/90 px-4 py-2 rounded-full shadow-sm text-xs flex items-center gap-2 text-gray-500 backdrop-blur-sm z-50 animate-pulse print:hidden">
+                  <Loader2 size={14} className="animate-spin text-[#eec676]" /> {t.loading}
+                </div>
+              )}
+              {baseRoute === 'dashboard' && (
+                user.role === 'parent' 
+                  ? <ParentDashboard t={t} user={user} refreshTrigger={refreshTrigger} setLoadingGlobal={setLoadingGlobal} />
+                  : <AdminDashboard t={t} patients={globalPatients} onNavOPD={navigateToOPD} />
+              )}
+              {baseRoute === 'patients' && user.role !== 'parent' && <PatientsView t={t} user={user} patients={globalPatients} clinicConfig={clinicConfig} refresh={() => handleGlobalRefresh()} onNavOPD={navigateToOPD} />}
+              {baseRoute === 'opd' && user.role !== 'parent' && <OPDView t={t} user={user} patients={globalPatients} initialHn={route.split(':')[1]} clinicConfig={clinicConfig} refreshTrigger={refreshTrigger} />}
+              {baseRoute === 'files' && user.role !== 'parent' && <FilesView t={t} patients={globalPatients} />}
+              {baseRoute === 'reports' && user.role !== 'parent' && <ReportsView t={t} patients={globalPatients} />}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // --- Shared Components ---
+    const NavItem = ({ icon, label, active, isCollapsed, onClick }) => (
+      <button onClick={onClick} className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all duration-200 ${active ? 'bg-[#eec676]/10 text-[#dcb360] font-medium shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`} title={isCollapsed ? label : ''}>
+        {icon && React.cloneElement(icon, { size: 20, className: `shrink-0 ${active ? 'text-[#eec676]' : ''}` })}
+        {!isCollapsed && <span className="truncate">{label}</span>}
+      </button>
+    );
+
+    const Modal = ({ isOpen, onClose, title, children }) => {
+      if (!isOpen) return null;
+      return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200 print:hidden">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden zoom-in-95">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-white z-10">
+              <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+              <button onClick={onClose} className="text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 rounded-full p-2 transition-colors"><X size={20} /></button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
+              {children}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- คอมโพเนนต์หน้าตัวอย่างก่อนพิมพ์ (Print Preview) จัด Layout ตามต้นฉบับ ---
+    const PrintPreview = ({ type, patient, history = [], clinicConfig, t, onClose }) => {
+      const isBlank = type === 'blank';
+
+      return (
+        <div className="fixed inset-0 z-[9999] bg-gray-600 overflow-y-auto flex flex-col print:static print:h-auto print:bg-white print:block print:overflow-visible font-sans" style={{ fontFamily: "'Kanit', sans-serif" }}>
+          
+          {/* Action Bar (ซ่อนตอนปริ้น) */}
+          <div className="sticky top-0 bg-gray-800 text-white p-4 flex justify-between items-center print:hidden shadow-md z-50">
+            <h3 className="font-medium text-lg">ตัวอย่างก่อนพิมพ์ (A4)</h3>
+            <div className="flex gap-3">
+              <button onClick={() => window.print()} className="bg-[#eec676] hover:bg-[#dcb360] text-gray-900 px-5 py-2 rounded-lg flex items-center gap-2 font-medium shadow-sm transition-colors">
+                <Printer size={18} /> สั่งพิมพ์
+              </button>
+              <button onClick={onClose} className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
+                <X size={18} /> ปิด
+              </button>
+            </div>
+          </div>
+
+          {/* กระดาษ A4 เสมือน */}
+          <div className="max-w-[210mm] print-preview-container bg-white mx-auto my-8 p-10 shadow-2xl print:m-0 print:p-0 print:shadow-none print:w-full text-black print:min-h-0 min-h-[297mm]">
+            
+            {/* Header - พิมพ์เฉพาะหน้าแรก */}
+            <div className="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
+              <div className="flex gap-4 items-center">
+                {clinicConfig?.LogoUrl && (
+                  <img src={formatImageUrl(clinicConfig.LogoUrl)} alt="Logo" className="w-16 h-16 object-contain rounded-full" />
+                )}
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900 mb-1">
+                    {clinicConfig?.ClinicName?.includes('บ้านฮักดี') ? (
+                      <React.Fragment>คลินิกพัฒนาการเด็ก<br/>บ้านฮักดี</React.Fragment>
+                    ) : (
+                      clinicConfig?.ClinicName || 'ชื่อคลินิก'
+                    )}
+                  </h1>
+                  <p className="text-[10px] text-gray-600 mb-0.5">{clinicConfig?.Address || '-'}</p>
+                  <p className="text-[10px] text-gray-600">
+                    โทร. {clinicConfig?.Phone || '-'} | Line ID: {clinicConfig?.LineID || clinicConfig?.LineId || '-'} | Email: {clinicConfig?.Email || '-'}
+                  </p>
+                </div>
+              </div>
+              <h2 className="text-xl font-bold text-[#eec676] pt-1 uppercase">OPD CARD</h2>
+            </div>
+
+            {/* Section 1: ข้อมูลผู้รับบริการ - พิมพ์เฉพาะหน้าแรก */}
+            <div className="mb-8">
+              <h3 className="text-[14px] font-bold text-gray-800 mb-4">ส่วนที่ 1: ข้อมูลผู้รับบริการ</h3>
+              
+              <div className="flex flex-col gap-4 text-[12px]">
+                <div className="flex gap-4">
+                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">HN:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.HN}</div></div>
+                   <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อ-สกุล:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : `${patient?.Name || ''} ${patient?.LastName || ''}`}</div></div>
+                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อเล่น:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Nickname}</div></div>
+                </div>
+                <div className="flex gap-4">
+                   <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">วัน/เดือน/ปีเกิด:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : formatThaiDate(patient?.DOB)}</div></div>
+                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">อายุ:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Age}</div></div>
+                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">เพศ:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Gender}</div></div>
+                </div>
+                <div className="flex gap-4">
+                   <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อ-สกุล ผู้ปกครอง:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.ParentName}</div></div>
+                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">โทร:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Phone}</div></div>
+                   <div className="flex-1"></div>
+                </div>
+                <div className="flex mt-2">
+                   <span className="font-semibold whitespace-nowrap mr-2 pt-1">อาการเบื้องต้น:</span>
+                   <div className="border-b border-dotted border-gray-500 flex-1 px-2 leading-relaxed min-h-[24px]">{isBlank ? '' : patient?.Symptom}</div>
+                </div>
+                 {isBlank && (
+                    <div className="border-b border-dotted border-gray-500 w-full mt-4 min-h-[20px]"></div>
+                 )}
+              </div>
+            </div>
+
+            {/* Section 2: ตารางประวัติ (รองรับการขึ้นหน้าใหม่) */}
+            <table className="w-full text-[12px] border-collapse">
+              <thead className="table-header-group">
+                <tr>
+                  <th colSpan="3" className="text-left pb-2 font-bold text-[14px] pt-4">
+                    ส่วนที่ 2: ประวัติการรับบริการ
+                  </th>
+                </tr>
+                <tr className="border-t-2 border-b-2 border-gray-900">
+                  <th className="py-2.5 px-2 text-left w-[18%] font-bold">วัน/เดือน/ปี</th>
+                  <th className="py-2.5 px-2 text-left w-[62%] font-bold">รายละเอียด</th>
+                  <th className="py-2.5 px-2 text-center w-[20%] font-bold">นักกิจกรรมบำบัด</th>
+                </tr>
+              </thead>
+              
+              <tbody className="table-row-group">
+                {type === 'filled' && history.length > 0 ? (
+                  history.map((h, i) => (
+                    <tr key={i} className="border-b border-gray-300 print-break-inside-avoid">
+                      <td className="py-3 px-2 align-top">{h.Date ? formatThaiDate(h.Date) : ''}</td>
+                      <td className="py-3 px-2 align-top whitespace-pre-line leading-relaxed">{h.Details}</td>
+                      <td className="py-3 px-2 align-top text-center">{h.Therapist}</td>
+                    </tr>
+                  ))
+                ) : (
+                  Array(14).fill(0).map((_, i) => (
+                    <tr key={i} className="border-b border-gray-300 print-break-inside-avoid">
+                      <td className="py-3 px-2 h-10"></td>
+                      <td className="py-3 px-2 h-10"></td>
+                      <td className="py-3 px-2 h-10"></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+
+              <tfoot className="table-footer-group">
+                <tr>
+                  <td colSpan="3" className="pt-6 pb-2">
+                    <div className="flex justify-end text-[11px] text-gray-500 font-medium">
+                      {isBlank ? '( HN .................................... - ............................................................ )' : `( HN: ${patient?.HN || '-'} - ${patient?.Name || ''} ${patient?.LastName || ''} )`}
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+          </div>
+        </div>
+      );
+    };
+
+
+    // --- Login View ---
+    const LoginView = ({ onLogin, lang, setLang, t, clinicConfig }) => {
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const cleanUser = username.trim();
+        const cleanPass = password.trim();
+        
+        try {
+          const userData = await fetchGAS('login', { username: cleanUser, password: cleanPass });
+          onLogin(userData);
+        } catch (error) {
+          if(window.Swal) window.Swal.fire({ icon: 'error', title: t.error, text: error.message, confirmButtonColor: THEME.primary });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] font-sans relative" style={{ fontFamily: "'Kanit', sans-serif" }}>
+          <button onClick={() => setLang(lang === 'th' ? 'en' : 'th')} className="absolute top-6 right-6 flex items-center gap-2 text-sm font-medium text-gray-600 bg-white shadow-sm px-4 py-2 rounded-full hover:bg-gray-50 transition">
+            <Languages size={18} /> {lang === 'th' ? 'English' : 'ภาษาไทย'}
+          </button>
+
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 mx-4">
+            <div className="text-center mb-8">
+              {clinicConfig?.LogoUrl ? (
+                <img src={formatImageUrl(clinicConfig.LogoUrl)} alt="Logo" className="w-24 h-24 object-contain mx-auto mb-4 drop-shadow-sm rounded-full bg-white" />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg mx-auto mb-4" style={{ backgroundColor: THEME.primary }}>C</div>
+              )}
+              <h1 className="text-2xl font-bold text-gray-900">{clinicConfig?.ClinicName || t.login_title}</h1>
+              <p className="text-gray-500 text-sm mt-2">{t.login_sub}</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t.username}</label>
+                <input type="text" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#eec676] focus:border-transparent outline-none transition-all" value={username} onChange={(e) => setUsername(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t.password}</label>
+                <input type="password" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#eec676] focus:border-transparent outline-none transition-all" value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <button type="submit" disabled={loading} className="w-full py-3 px-4 rounded-xl text-white font-medium shadow-md transition-all hover:shadow-lg disabled:opacity-70 flex justify-center items-center gap-2" style={{ backgroundColor: THEME.primary }}>
+                {loading ? <React.Fragment><Loader2 size={18} className="animate-spin" /> {t.auth_ing}</React.Fragment> : t.signin}
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    // --- Admin Dashboard View ---
+    const AdminDashboard = ({ t, patients, onNavOPD }) => {
+      const [filterStatus, setFilterStatus] = useState('active');
+
+      const activeCount = patients.filter(p => p.Status?.toLowerCase() === 'active').length;
+      const pendingCount = patients.filter(p => p.Status?.toLowerCase() === 'pending').length;
+
+      const filteredPatients = useMemo(() => {
+        if (filterStatus === 'all') return patients;
+        return patients.filter(p => p.Status?.toLowerCase() === filterStatus);
+      }, [patients, filterStatus]);
+
+      return (
+        <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 shrink-0">
+            <KPICard title={t.total_patients} value={patients.length || 0} icon={<Users />} />
+            <KPICard title={t.active_cases} value={activeCount || 0} icon={<Activity />} />
+            <KPICard title={t.pending_cases} value={pendingCount || 0} icon={<PieChart />} />
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex-1 flex flex-col min-h-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3 shrink-0">
+              <h3 className="text-lg font-semibold text-gray-800">{t.patients} (Recent)</h3>
+              
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setFilterStatus('active')} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${filterStatus === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Active</button>
+                <button onClick={() => setFilterStatus('pending')} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${filterStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Pending</button>
+                <button onClick={() => setFilterStatus('inactive')} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${filterStatus === 'inactive' ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Inactive</button>
+                <button onClick={() => setFilterStatus('all')} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${filterStatus === 'all' ? 'bg-[#eec676] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>ดูทั้งหมด</button>
+              </div>
+            </div>
+
+            <div className="space-y-3 overflow-y-auto flex-1 pr-2">
+              {filteredPatients.map((p, i) => (
+                <div 
+                  key={i} 
+                  onClick={() => onNavOPD(p.HN)}
+                  className="flex gap-4 items-center p-3 rounded-2xl hover:bg-[#eec676]/5 transition border border-transparent hover:border-[#eec676]/20 cursor-pointer group"
+                  title={t.view_details}
+                >
+                  <div className="w-12 h-12 rounded-full bg-[#eec676]/20 flex items-center justify-center flex-shrink-0 text-[#dcb360] font-bold text-lg">
+                    {p.Name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800 group-hover:text-[#dcb360] transition-colors">{p.Name} {p.LastName}</p>
+                    <p className="text-xs text-gray-500">HN: {p.HN} • {p.Phone}</p>
+                  </div>
+                  <div className="text-right flex items-center gap-3">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium uppercase ${p.Status?.toLowerCase() === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      {p.Status || 'N/A'}
+                    </span>
+                    <ChevronRight size={18} className="text-gray-300 group-hover:text-[#dcb360] transition-colors" />
+                  </div>
+                </div>
+              ))}
+              {filteredPatients.length === 0 && <p className="text-sm text-gray-500 text-center py-8">{t.no_data}</p>}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- Parent Dashboard View ---
+    const ParentDashboard = ({ t, user, refreshTrigger, setLoadingGlobal }) => {
+      const [data, setData] = useState({ totalCourses: 0, usedCourses: null, remainingCourses: null, appointments: [], opdHistory: [] });
+      const [loading, setLoading] = useState(true);
+      const [dateFilter, setDateFilter] = useState('');
+      const [currentPage, setCurrentPage] = useState(1);
+      const [selectedOPD, setSelectedOPD] = useState(null);
+      const itemsPerPage = 10;
+
+      useEffect(() => {
+        setLoadingGlobal(true);
+        fetchGAS('getParentDashboardData', { hn: user.hn })
+          .then(res => setData(res || { totalCourses: 0, usedCourses: null, remainingCourses: null, appointments: [], opdHistory: [] }))
+          .catch(console.error)
+          .finally(() => { setLoading(false); setLoadingGlobal(false); });
+      }, [user.hn, refreshTrigger]);
+
+      const totalCourses = Number(data.totalCourses) || 0;
+      const attendedCount = data.usedCourses !== undefined && data.usedCourses !== null ? Number(data.usedCourses) : data.appointments.length;
+      const remainingCount = data.remainingCourses !== undefined && data.remainingCourses !== null ? Number(data.remainingCourses) : (totalCourses - attendedCount);
+
+      const filteredAppts = useMemo(() => {
+        let filtered = data.appointments;
+        if (dateFilter) {
+          filtered = filtered.filter(a => normalizeDate(a.Date) === dateFilter);
+        }
+        return filtered.sort((a, b) => new Date(normalizeDate(b.Date)) - new Date(normalizeDate(a.Date)));
+      }, [data.appointments, dateFilter]);
+
+      const totalPages = Math.ceil(filteredAppts.length / itemsPerPage);
+      const paginatedAppts = filteredAppts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+      const getOpdForDate = (dateStr) => {
+        return data.opdHistory.find(o => {
+            return normalizeDate(o.Date) === normalizeDate(dateStr) && normalizeDate(dateStr) !== '';
+        });
+      };
+
+      if (loading) {
+        return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-[#eec676]" size={36} /></div>;
+      }
+
+      return (
+        <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
+            <KPICard title={t.total_courses} value={totalCourses} icon={<Package />} />
+            <KPICard title={t.used_courses} value={attendedCount} icon={<Activity />} />
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">{t.remaining_courses}</p>
+                <h3 className={`text-3xl font-bold ${remainingCount <= 3 ? 'text-red-500' : 'text-gray-900'}`}>{remainingCount}</h3>
+              </div>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${remainingCount <= 3 ? 'text-red-500 bg-red-50' : 'text-[#dcb360] bg-[#eec676]/20'}`}>
+                <Clock />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 bg-white">
+              <h3 className="text-lg font-semibold text-gray-800">{t.service_history}</h3>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Filter size={18} className="text-gray-400" />
+                <input 
+                  type="date" 
+                  className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676] transition-colors w-full sm:w-auto"
+                  value={dateFilter}
+                  onChange={e => { setDateFilter(e.target.value); setCurrentPage(1); }}
+                />
+                {dateFilter && (
+                  <button onClick={() => {setDateFilter(''); setCurrentPage(1);}} className="text-gray-400 hover:text-gray-700"><X size={16}/></button>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-0">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-100">
+                  <tr className="text-gray-500 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-medium whitespace-nowrap">{t.date}</th>
+                    <th className="p-4 font-medium whitespace-nowrap">{t.therapist}</th>
+                    <th className="p-4 font-medium whitespace-nowrap">{t.status}</th>
+                    <th className="p-4 font-medium text-center whitespace-nowrap">{t.actions}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedAppts.length === 0 ? (
+                    <tr><td colSpan="4" className="p-12 text-center text-gray-500">{t.no_data}</td></tr>
+                  ) : (
+                    paginatedAppts.map((a, i) => {
+                      const opdRecord = getOpdForDate(a.Date);
+                      const hasOpd = !!opdRecord;
+                      const isVisibleToParent = hasOpd && (opdRecord.IsVisible === true || String(opdRecord.IsVisible).toUpperCase() === 'TRUE');
+                      
+                      // ดึงชื่อนักกิจกรรมบำบัดจากใบ OPD ก่อน (แม่นยำที่สุด) ถ้ายังไม่มีให้ดึงจากใบนัด
+                      const displayTherapist = opdRecord?.Therapist || a.Therapist || '-';
+
+                      return (
+                        <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
+                          <td className="p-4 text-sm font-medium text-gray-900">{formatThaiDate(a.Date)}</td>
+                          <td className="p-4 text-sm text-gray-700">{displayTherapist}</td>
+                          <td className="p-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
+                              {a.Status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-center">
+                             <button 
+                                disabled={!isVisibleToParent}
+                                onClick={() => setSelectedOPD(opdRecord)}
+                                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                                  isVisibleToParent 
+                                    ? 'bg-[#eec676]/10 text-[#dcb360] hover:bg-[#eec676] hover:text-white shadow-sm' 
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                }`}
+                             >
+                               {t.view_opd}
+                             </button>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-white shrink-0">
+                <p className="text-sm text-gray-500">หน้า {currentPage} จาก {totalPages}</p>
+                <div className="flex gap-2">
+                  <button 
+                    disabled={currentPage === 1} 
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  ><ChevronLeft size={16}/></button>
+                  <button 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  ><ChevronRight size={16}/></button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Modal isOpen={!!selectedOPD} onClose={() => setSelectedOPD(null)} title="รายละเอียดการรับบริการ">
+            {selectedOPD && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <div>
+                    <p className="text-xs text-gray-500">{t.date}</p>
+                    <p className="font-semibold text-gray-900">{formatThaiDate(selectedOPD.Date)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">{t.therapist}</p>
+                    <p className="font-medium text-[#dcb360] bg-[#eec676]/10 px-3 py-1 rounded-full text-sm inline-block mt-1">{selectedOPD.Therapist}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">{t.details}</p>
+                  <div className="bg-gray-50 p-4 rounded-2xl text-sm text-gray-700 whitespace-pre-line leading-relaxed border border-gray-100">
+                    {selectedOPD.Details}
+                  </div>
+                </div>
+
+                {selectedOPD.FileUrl && (
+                  <div>
+                     <p className="text-xs font-medium text-gray-500 mb-2">ไฟล์แนบ</p>
+                     <a href={selectedOPD.FileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-medium hover:bg-blue-100 transition-colors">
+                       <FileText size={16} /> ดูเอกสารแนบ
+                     </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </Modal>
+
+        </div>
+      );
+    };
+
+    const KPICard = ({ title, value, icon }) => (
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+        <div>
+          <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+          <h3 className="text-3xl font-bold text-gray-900">{value}</h3>
+        </div>
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[#dcb360] bg-[#eec676]/20">
+          {icon}
+        </div>
+      </div>
+    );
+
+    // --- Patients View ---
+    const PatientsView = ({ t, user, patients, refresh, onNavOPD, clinicConfig }) => {
+      const [searchTerm, setSearchTerm] = useState('');
+      const [isModalOpen, setModalOpen] = useState(false);
+      const [editingPatient, setEditingPatient] = useState(null);
+      const [isSaving, setSaving] = useState(false);
+      const [showBlankPrint, setShowBlankPrint] = useState(false);
+
+      const safeSearchTerm = String(searchTerm || '').toLowerCase();
+      const filteredPatients = patients.filter(p => 
+        String(p.HN || '').toLowerCase().includes(safeSearchTerm) ||
+        String(p.Name || '').toLowerCase().includes(safeSearchTerm) ||
+        String(p.Nickname || '').toLowerCase().includes(safeSearchTerm)
+      );
+
+      const openAddModal = () => {
+        setEditingPatient({ HN: `HN${String(patients.length + 1).padStart(3, '0')}`, Status: 'Active', Name: '', LastName: '', Nickname: '', Gender: 'ชาย', DOB: '', Age: '', Phone: '', ParentName: '', Symptom: '', Source: '', AssignedTherapist: user.role === 'therapist' ? user.username : '' });
+        setModalOpen(true);
+      };
+
+      const openEditModal = (p) => {
+        const formattedPatient = {...p, DOB: formatDateForInput(p.DOB)};
+        setEditingPatient(formattedPatient);
+        setModalOpen(true);
+      };
+
+      const handleSavePatient = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+          const isNew = !patients.find(p => String(p.HN) === String(editingPatient.HN));
+          await fetchGAS('savePatient', { isNew, data: editingPatient });
+          if(window.Swal) window.Swal.fire({ title: t.save_success, icon: 'success', confirmButtonColor: THEME.primary, timer: 1500, showConfirmButton: false });
+          setModalOpen(false);
+          refresh();
+        } catch (err) {
+          if(window.Swal) window.Swal.fire({ title: t.error, text: err.message, icon: 'error', confirmButtonColor: THEME.primary });
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      return (
+        <div className="animate-in fade-in duration-500 h-full flex flex-col">
+          {showBlankPrint && (
+            <PrintPreview type="blank" t={t} clinicConfig={clinicConfig} onClose={() => setShowBlankPrint(false)} />
+          )}
+
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">{t.patients}</h2>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowBlankPrint(true)} className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl transition-all font-medium shadow-sm">
+                <Printer size={18} /> {t.print_blank}
+              </button>
+              {(user.role === 'admin' || user.role === 'staff' || user.role === 'employee') && (
+                <button onClick={openAddModal} className="flex items-center gap-2 bg-[#eec676] hover:bg-[#dcb360] text-white px-5 py-2.5 rounded-xl transition-all font-medium shadow-sm hover:shadow-md">
+                  <Plus size={18} /> {t.add_patient}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 shrink-0 bg-white z-20 relative">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input type="text" placeholder={t.search_patient} className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-transparent focus:bg-white focus:border-[#eec676] focus:ring-2 focus:ring-[#eec676]/20 rounded-xl outline-none transition-all text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-0">
+              <table className="w-full text-left border-collapse relative">
+                <thead className="sticky top-0 bg-gray-50/90 backdrop-blur-sm z-10 border-b border-gray-100">
+                  <tr className="text-gray-500 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-medium whitespace-nowrap">{t.hn}</th>
+                    <th className="p-4 font-medium">{t.patient_info}</th>
+                    <th className="p-4 font-medium whitespace-nowrap">{t.status}</th>
+                    <th className="p-4 font-medium whitespace-nowrap">{t.contact}</th>
+                    <th className="p-4 font-medium text-right whitespace-nowrap">{t.actions}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredPatients.length === 0 ? (
+                    <tr><td colSpan="5" className="p-12 text-center text-gray-500">{t.no_data}</td></tr>
+                  ) : (
+                    filteredPatients.map((p, i) => (
+                      <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
+                        <td className="p-4 text-sm font-medium text-gray-900">{p.HN}</td>
+                        <td className="p-4">
+                          <p className="text-sm font-semibold text-gray-900">{p.Name} {p.LastName}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Nickname: {p.Nickname || '-'}</p>
+                        </td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium uppercase ${p.Status?.toLowerCase() === 'active' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}`}>
+                            {p.Status || 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm text-gray-600">{p.Phone}</td>
+                        <td className="p-4 text-right space-x-2 flex justify-end">
+                           <button onClick={() => onNavOPD(p.HN)} className="p-2 text-[#eec676] hover:bg-[#eec676]/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-[#eec676]/30" title={t.view_details}>
+                             <ClipboardList size={16} /> {t.opd}
+                           </button>
+                           {(user.role === 'admin' || user.role === 'staff' || user.role === 'employee') && (
+                             <button onClick={() => openEditModal(p)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-blue-200" title={t.edit_patient}>
+                               <Edit size={16} /> {t.edit_patient}
+                             </button>
+                           )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title={editingPatient?.Name ? t.edit_patient : t.add_patient}>
+            {editingPatient && (
+              <form onSubmit={handleSavePatient} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.hn}</label><input required value={editingPatient.HN} onChange={e => setEditingPatient({...editingPatient, HN: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none" readOnly={!!editingPatient.Name} /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.status}</label><select value={editingPatient.Status} onChange={e => setEditingPatient({...editingPatient, Status: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-[#eec676]"><option>Active</option><option>Pending</option><option>Inactive</option></select></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Name</label><input required value={editingPatient.Name} onChange={e => setEditingPatient({...editingPatient, Name: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Last Name</label><input required value={editingPatient.LastName} onChange={e => setEditingPatient({...editingPatient, LastName: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Nickname</label><input value={editingPatient.Nickname} onChange={e => setEditingPatient({...editingPatient, Nickname: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.gender}</label>
+                    <select value={editingPatient.Gender} onChange={e => setEditingPatient({...editingPatient, Gender: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-[#eec676]">
+                      <option value="ชาย">ชาย (Male)</option>
+                      <option value="หญิง">หญิง (Female)</option>
+                    </select>
+                  </div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.dob}</label><input type="date" value={editingPatient.DOB} onChange={e => setEditingPatient({...editingPatient, DOB: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.age}</label><input type="number" value={editingPatient.Age} onChange={e => setEditingPatient({...editingPatient, Age: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.contact}</label><input required value={editingPatient.Phone} onChange={e => setEditingPatient({...editingPatient, Phone: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.general_info}</label><textarea rows={3} value={editingPatient.Symptom} onChange={e => setEditingPatient({...editingPatient, Symptom: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676] resize-none"></textarea></div>
+                </div>
+                <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-gray-100">
+                  <button type="button" onClick={() => setModalOpen(false)} className="px-5 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-medium transition-colors">{t.cancel}</button>
+                  <button type="submit" disabled={isSaving} className="px-5 py-2.5 bg-[#eec676] text-white hover:bg-[#dcb360] rounded-xl text-sm font-medium shadow-sm flex items-center gap-2 transition-colors">
+                    {isSaving && <Loader2 size={16} className="animate-spin" />} {t.save}
+                  </button>
+                </div>
+              </form>
+            )}
+          </Modal>
+        </div>
+      );
+    };
+
+    // --- OPD View ---
+    const OPDView = ({ t, user, patients, initialHn, clinicConfig }) => {
+      const [selectedHn, setSelectedHn] = useState(initialHn || '');
+      const [history, setHistory] = useState([]);
+      const [loadingHistory, setLoadingHistory] = useState(false);
+      const [formData, setFormData] = useState({ Date: new Date().toISOString().split('T')[0], Details: '', Therapist: user.name, IsVisible: false });
+      const [uploadFile, setUploadFile] = useState(null);
+      const [savingOPD, setSavingOPD] = useState(false);
+      const [printType, setPrintType] = useState(null); 
+      
+      const [therapistsList, setTherapistsList] = useState([]);
+
+      // สถานะใหม่สำหรับการแบ่งหน้าและแก้ไข
+      const [currentPage, setCurrentPage] = useState(1);
+      const [isEditingOPD, setIsEditingOPD] = useState(false);
+      const [editingOPDId, setEditingOPDId] = useState(null);
+      const itemsPerPage = 10;
+
+      useEffect(() => {
+        if (user.role !== 'parent') {
+          fetchGAS('getUsersList')
+            .then(list => setTherapistsList(list || []))
+            .catch(() => setTherapistsList([])); 
+        }
+      }, [user.role]);
+
+      const currentPatient = useMemo(() => {
+        return patients.find(p => String(p.HN) === String(selectedHn)) || {};
+      }, [selectedHn, patients]);
+
+      useEffect(() => {
+        if (initialHn && initialHn !== selectedHn) {
+          setSelectedHn(initialHn);
+        }
+      }, [initialHn]);
+
+      useEffect(() => {
+        if (selectedHn) {
+          loadHistory(selectedHn);
+          setCurrentPage(1);
+          cancelEditOPD();
+        }
+      }, [selectedHn]);
+
+      const loadHistory = async (hn) => {
+        setLoadingHistory(true);
+        try {
+          const originalPatient = patients.find(p => String(p.HN) === String(hn));
+          const exactHn = originalPatient ? originalPatient.HN : hn;
+
+          const data = await fetchGAS('getPatientDetails', { hn: exactHn });
+          setHistory(data.history || []);
+        } catch (err) {
+          console.error(err);
+          if(window.Swal) window.Swal.fire({ title: t.error, text: 'Failed to fetch history', icon: 'error', confirmButtonColor: THEME.primary });
+        } finally {
+          setLoadingHistory(false);
+        }
+      };
+
+      const handleSaveOPD = async (e) => {
+        e.preventDefault();
+        if (!selectedHn) return alert(t.select_patient);
+        setSavingOPD(true);
+        
+        try {
+          const originalPatient = patients.find(p => String(p.HN) === String(selectedHn));
+          const exactHn = originalPatient ? originalPatient.HN : selectedHn;
+
+          let fileUrl = '';
+          if (uploadFile) {
+            const fileRes = await uploadBase64ToGAS(uploadFile, originalPatient || { HN: exactHn });
+            fileUrl = fileRes.url;
+          }
+          
+          const newId = `OPD-${Date.now()}`;
+          
+          await fetchGAS('saveService', { 
+            isEdit: isEditingOPD,
+            ID: isEditingOPD ? editingOPDId : newId, 
+            HN: exactHn, 
+            Date: formData.Date, 
+            Therapist: formData.Therapist, 
+            Details: formData.Details, 
+            FileUrl: fileUrl,
+            IsVisible: formData.IsVisible
+          });
+
+          if(window.Swal) window.Swal.fire({ title: t.save_success, icon: 'success', confirmButtonColor: THEME.primary, timer: 1500, showConfirmButton: false });
+          
+          cancelEditOPD();
+          loadHistory(selectedHn);
+        } catch (err) {
+          if(window.Swal) window.Swal.fire({ title: t.error, text: err.message, icon: 'error', confirmButtonColor: THEME.primary });
+        } finally {
+          setSavingOPD(false);
+        }
+      };
+
+      const handleEditOPD = (item) => {
+        setIsEditingOPD(true);
+        setEditingOPDId(item.ID);
+        setFormData({
+            Date: item.Date ? formatDateForInput(item.Date) : '',
+            Details: item.Details,
+            Therapist: item.Therapist,
+            IsVisible: item.IsVisible === true || item.IsVisible === 'TRUE' || item.IsVisible === 'true'
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      const cancelEditOPD = () => {
+        setIsEditingOPD(false);
+        setEditingOPDId(null);
+        setFormData({ Date: new Date().toISOString().split('T')[0], Details: '', Therapist: user.name, IsVisible: false });
+        setUploadFile(null);
+        const fileInput = document.getElementById('opd-file-upload');
+        if (fileInput) fileInput.value = '';
+      };
+
+      const handleDeleteOPD = async (id) => {
+        if(window.Swal) {
+            const result = await window.Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: "คุณต้องการลบประวัตินี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#9ca3af',
+                confirmButtonText: 'ใช่, ลบเลย!',
+                cancelButtonText: 'ยกเลิก'
+            });
+            if(result.isConfirmed) {
+                setLoadingHistory(true);
+                try {
+                    await fetchGAS('deleteService', { id });
+                    window.Swal.fire({ title: 'ลบแล้ว!', text: 'ลบประวัติเรียบร้อยแล้ว', icon: 'success', confirmButtonColor: THEME.primary });
+                    loadHistory(selectedHn);
+                } catch (err) {
+                    window.Swal.fire({ title: 'ข้อผิดพลาด', text: err.message, icon: 'error', confirmButtonColor: THEME.primary });
+                    setLoadingHistory(false);
+                }
+            }
+        }
+      };
+
+      const toggleVisibility = async (recordId, currentVis) => {
+        if (!recordId) return;
+        const isCurrentlyVisible = currentVis === true || currentVis === 'TRUE' || currentVis === 'true';
+        const newVis = !isCurrentlyVisible;
+
+        setHistory(prev => prev.map(h => h.ID === recordId ? { ...h, IsVisible: newVis } : h));
+
+        try {
+          await fetchGAS('toggleVisibility', { id: recordId, isVisible: newVis });
+        } catch(err) {
+          setHistory(prev => prev.map(h => h.ID === recordId ? { ...h, IsVisible: isCurrentlyVisible } : h));
+          if(window.Swal) window.Swal.fire({ title: t.error, text: err.message, icon: 'error', confirmButtonColor: THEME.primary });
+        }
+      };
+
+      const displayHistory = useMemo(() => {
+        let filtered = history.filter(item => {
+          if (user.role === 'parent') {
+            return item.IsVisible === true || item.IsVisible === 'TRUE' || item.IsVisible === 'true';
+          }
+          return true;
+        });
+        
+        // เรียงจากวันที่ล่าสุดไปเก่าสุด
+        return filtered.sort((a, b) => new Date(normalizeDate(b.Date)) - new Date(normalizeDate(a.Date)));
+      }, [history, user.role]);
+
+      const totalPages = Math.ceil(displayHistory.length / itemsPerPage);
+      const paginatedHistory = displayHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+      return (
+        <React.Fragment>
+          {printType && (
+            <PrintPreview 
+              type={printType} 
+              patient={currentPatient} 
+              history={displayHistory} 
+              clinicConfig={clinicConfig} 
+              t={t} 
+              onClose={() => setPrintType(null)} 
+            />
+          )}
+
+          <div className={`animate-in fade-in duration-500 print:hidden ${printType ? 'hidden' : 'block'}`}>
+            <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">{t.opd}</h2>
+              
+              <div className="flex w-full md:w-auto items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0">
+                <select value={selectedHn} onChange={e => setSelectedHn(e.target.value)} className="w-full md:w-64 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm outline-none focus:border-[#eec676] focus:ring-2 focus:ring-[#eec676]/20 transition-all font-medium shrink-0">
+                  <option value="">{t.select_patient}</option>
+                  {patients.map(p => <option key={p.HN} value={p.HN}>{p.HN} - {p.Name} {p.LastName}</option>)}
+                </select>
+                
+                <button onClick={() => setPrintType('form')} disabled={!selectedHn} className="flex items-center gap-2 px-3 md:px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0" title={t.print_form}>
+                  <Printer size={18} /> <span className="hidden sm:inline">{t.print_form}</span>
+                </button>
+                <button onClick={() => setPrintType('filled')} disabled={!selectedHn || displayHistory.length === 0} className="flex items-center gap-2 px-3 md:px-4 py-2.5 bg-[#eec676] hover:bg-[#dcb360] text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0" title={t.print_filled}>
+                  <Printer size={18} /> <span className="hidden sm:inline">{t.print_filled}</span>
+                </button>
+              </div>
+            </div>
+            
+            {!selectedHn ? (
+              <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-3xl bg-white text-gray-400">
+                <ClipboardList size={48} className="text-gray-200 mb-4" />
+                <p>{t.select_patient}</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-6">
+                
+                {/* Form Section (แนวนอน โชว์ด้านบน) */}
+                {(user.role === 'admin' || user.role === 'therapist' || user.role === 'staff' || user.role === 'employee') && (
+                  <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-5">{isEditingOPD ? 'แก้ไขประวัติการรับบริการ' : t.add_record}</h3>
+                    <form onSubmit={handleSaveOPD} className="flex flex-col gap-4">
+                      <div className="flex flex-col md:flex-row gap-4 items-start">
+                        <div className="w-full md:w-2/12">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">{t.date}</label>
+                          <input type="date" required value={formData.Date} onChange={e => setFormData({...formData, Date: e.target.value})} className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#eec676] transition-all" />
+                        </div>
+                        <div className="w-full md:w-3/12">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">{t.therapist}</label>
+                          <select required value={formData.Therapist} onChange={e => setFormData({...formData, Therapist: e.target.value})} className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#eec676] transition-all">
+                            <option value={user.name}>{user.name}</option>
+                            {therapistsList.filter(name => name !== user.name).map((name, idx) => (
+                              <option key={idx} value={name}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="w-full md:w-4/12">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">{t.details}</label>
+                          <textarea rows={2} required value={formData.Details} onChange={e => setFormData({...formData, Details: e.target.value})} className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#eec676] transition-all resize-y min-h-[42px]"></textarea>
+                        </div>
+                        <div className="w-full md:w-2/12">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">{t.attachment}</label>
+                          <input id="opd-file-upload" type="file" onChange={e => setUploadFile(e.target.files[0])} className="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#eec676]/10 file:text-[#dcb360] hover:file:bg-[#eec676]/20 cursor-pointer bg-gray-50 rounded-xl border border-gray-200" />
+                        </div>
+                        <div className="w-full md:w-1/12 flex flex-col justify-end gap-2 h-full pt-1">
+                           <div className="flex items-center justify-center pt-2 pb-1">
+                               <label className="flex items-center gap-2 cursor-pointer" title={formData.IsVisible ? t.visible_desc : t.hidden_desc}>
+                                   <input type="checkbox" checked={formData.IsVisible} onChange={e => setFormData({ ...formData, IsVisible: e.target.checked })} className="w-4 h-4 rounded text-[#eec676] focus:ring-[#eec676]" />
+                                   <span className="text-xs font-medium text-gray-700 md:hidden">อนุญาตให้ผู้ปกครองเห็น</span>
+                                   {formData.IsVisible ? <Eye size={16} className="text-green-600 hidden md:block" /> : <EyeOff size={16} className="text-gray-400 hidden md:block" />}
+                               </label>
+                           </div>
+                           <div className="flex flex-col gap-2">
+                               <button type="submit" disabled={savingOPD} className="w-full py-2 bg-[#eec676] hover:bg-[#dcb360] text-white rounded-xl text-xs font-medium transition-all shadow-sm flex items-center justify-center gap-1">
+                                   {savingOPD ? <Loader2 size={14} className="animate-spin" /> : (isEditingOPD ? 'อัปเดต' : t.save)}
+                               </button>
+                               {isEditingOPD && (
+                                   <button type="button" onClick={cancelEditOPD} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-medium transition-all">
+                                       ยกเลิก
+                                   </button>
+                               )}
+                           </div>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Table Section (Pagination & Data) */}
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden min-h-[400px]">
+                  <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-white">
+                      <h3 className="text-lg font-semibold text-gray-800">ประวัติการรับบริการ: {selectedHn}</h3>
+                      <span className="text-sm text-gray-500">ทั้งหมด {displayHistory.length} รายการ</span>
+                  </div>
+                  
+                  {loadingHistory ? (
+                      <div className="flex justify-center py-12"><Loader2 size={36} className="animate-spin text-[#eec676]" /></div>
+                  ) : displayHistory.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                          <FileText size={40} className="text-gray-200 mb-3" />
+                          <p>{t.no_data}</p>
+                      </div>
+                  ) : (
+                      <React.Fragment>
+                          <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                  <thead className="bg-gray-50/90 border-b border-gray-100">
+                                      <tr className="text-gray-500 text-xs uppercase tracking-wider">
+                                          <th className="p-4 font-medium whitespace-nowrap w-[15%]">{t.date}</th>
+                                          <th className="p-4 font-medium min-w-[200px] w-[50%]">{t.details}</th>
+                                          <th className="p-4 font-medium whitespace-nowrap w-[15%]">{t.therapist}</th>
+                                          <th className="p-4 font-medium text-center whitespace-nowrap w-[10%]">การมองเห็น</th>
+                                          <th className="p-4 font-medium text-center whitespace-nowrap w-[10%]">จัดการ</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                      {paginatedHistory.map((item, i) => {
+                                          const isRecordVisible = item.IsVisible === true || item.IsVisible === 'TRUE' || item.IsVisible === 'true';
+                                          return (
+                                              <tr key={i} className={`hover:bg-gray-50/80 transition-colors ${user.role !== 'parent' && !isRecordVisible ? 'opacity-70' : ''}`}>
+                                                  <td className="p-4 text-sm text-gray-900 font-medium align-top whitespace-nowrap">
+                                                      {item.Date ? formatThaiDate(item.Date) : 'N/A'}
+                                                  </td>
+                                                  <td className="p-4 text-sm text-gray-700 whitespace-pre-line leading-relaxed align-top">
+                                                      {item.Details}
+                                                  </td>
+                                                  <td className="p-4 text-sm text-gray-600 align-top whitespace-nowrap">
+                                                      <span className="bg-gray-100 px-2.5 py-1 rounded-md">{item.Therapist}</span>
+                                                  </td>
+                                                  <td className="p-4 text-center align-top">
+                                                      {user.role !== 'parent' ? (
+                                                          <button onClick={() => toggleVisibility(item.ID, item.IsVisible)} className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors inline-block" title={isRecordVisible ? t.visible_desc : t.hidden_desc}>
+                                                              {isRecordVisible ? <Eye size={18} className="text-green-600" /> : <EyeOff size={18} className="text-gray-400" />}
+                                                          </button>
+                                                      ) : (
+                                                          isRecordVisible ? <Eye size={18} className="text-green-600 inline-block" /> : <EyeOff size={18} className="text-gray-400 inline-block" />
+                                                      )}
+                                                  </td>
+                                                  <td className="p-4 align-top">
+                                                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                                          {item.FileUrl && (
+                                                              <a href={item.FileUrl} target="_blank" rel="noreferrer" className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="ดูไฟล์แนบ">
+                                                                  <FileText size={16} />
+                                                              </a>
+                                                          )}
+                                                          {user.role !== 'parent' && (
+                                                              <React.Fragment>
+                                                                <button onClick={() => handleEditOPD(item)} className="p-1.5 text-[#eec676] hover:bg-[#eec676]/10 rounded-lg transition-colors" title="แก้ไข">
+                                                                    <Edit2 size={16} />
+                                                                </button>
+                                                                <button onClick={() => handleDeleteOPD(item.ID)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="ลบ">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                              </React.Fragment>
+                                                          )}
+                                                      </div>
+                                                  </td>
+                                              </tr>
+                                          );
+                                      })}
+                                  </tbody>
+                              </table>
+                          </div>
+                          
+                          {/* Pagination Controls */}
+                          {totalPages > 1 && (
+                              <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-white shrink-0 mt-auto">
+                                  <p className="text-sm text-gray-500">หน้า {currentPage} จาก {totalPages}</p>
+                                  <div className="flex gap-2">
+                                      <button 
+                                          disabled={currentPage === 1} 
+                                          onClick={() => setCurrentPage(p => p - 1)}
+                                          className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600"
+                                      ><ChevronLeft size={16}/></button>
+                                      <button 
+                                          disabled={currentPage === totalPages} 
+                                          onClick={() => setCurrentPage(p => p + 1)}
+                                          className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600"
+                                      ><ChevronRight size={16}/></button>
+                                  </div>
+                              </div>
+                          )}
+                      </React.Fragment>
+                  )}
+                </div>
+
+              </div>
+            )}
+          </div>
+        </React.Fragment>
+      );
+    };
+
+    // --- Files View ---
+    const FilesView = ({ t, patients }) => {
+      const [selectedPatient, setSelectedPatient] = useState('');
+      const [isUploading, setIsUploading] = useState(false);
+
+      const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file || !selectedPatient) return;
+
+        const patientData = patients.find(p => String(p.HN) === String(selectedPatient));
+        if (!patientData) return;
+
+        setIsUploading(true);
+        try {
+          await uploadBase64ToGAS(file, patientData);
+          if(window.Swal) window.Swal.fire({ title: t.upload_success, icon: 'success', confirmButtonColor: THEME.primary });
+        } catch (err) {
+          if(window.Swal) window.Swal.fire({ title: t.error, text: err.message, icon: 'error', confirmButtonColor: THEME.primary });
+        } finally {
+          setIsUploading(false);
+          e.target.value = ''; // clear input
+        }
+      };
+
+      return (
+        <div className="animate-in fade-in duration-500 max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">{t.file_manager}</h2>
+          
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t.select_patient}</label>
+            <select value={selectedPatient} onChange={e => setSelectedPatient(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#eec676] focus:bg-white transition-colors mb-6 font-medium">
+              <option value="">{t.select_patient}</option>
+              {patients.map(p => <option key={p.HN} value={p.HN}>{p.HN} - {p.Name} {p.LastName}</option>)}
+            </select>
+
+            <div className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all ${selectedPatient ? 'border-[#eec676] bg-[#eec676]/5' : 'border-gray-200 bg-gray-50 opacity-60'}`}>
+              <UploadCloud size={48} className={`mx-auto mb-4 ${selectedPatient ? 'text-[#dcb360]' : 'text-gray-300'}`} />
+              <p className="text-gray-600 mb-5 font-medium">{t.upload}</p>
+              <div className="max-w-xs mx-auto">
+                <input 
+                  type="file" 
+                  onChange={handleFileUpload} 
+                  disabled={!selectedPatient || isUploading}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#eec676]/20 file:text-[#dcb360] hover:file:bg-[#eec676]/30 cursor-pointer disabled:cursor-not-allowed"
+                />
+              </div>
+              {isUploading && <p className="text-sm text-[#dcb360] mt-5 flex items-center justify-center gap-2 font-medium"><Loader2 size={18} className="animate-spin" /> {t.uploading}</p>}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- Reports View ---
+    const ReportsView = ({ t, patients }) => {
+      const statusCounts = useMemo(() => {
+        const counts = { active: 0, pending: 0, inactive: 0 };
+        patients.forEach(p => {
+          const s = String(p.Status).toLowerCase();
+          if (counts[s] !== undefined) counts[s]++;
+          else counts.inactive++; 
+        });
+        return counts;
+      }, [patients]);
+
+      const total = patients.length || 1;
+
+      return (
+        <div className="animate-in fade-in duration-500">
+           <h2 className="text-2xl font-bold text-gray-800 mb-6">{t.stats_report}</h2>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                <h3 className="text-lg font-semibold text-gray-800 mb-8 w-full text-left">{t.status}</h3>
+                
+                <div className="w-48 h-48 rounded-full relative shadow-inner mb-8 transition-all hover:scale-105" style={{
+                  background: `conic-gradient(
+                    #22c55e 0% ${(statusCounts.active/total)*100}%, 
+                    #eab308 ${(statusCounts.active/total)*100}% ${((statusCounts.active + statusCounts.pending)/total)*100}%, 
+                    #94a3b8 ${((statusCounts.active + statusCounts.pending)/total)*100}% 100%
+                  )`
+                }}>
+                  <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center shadow-sm">
+                    <span className="text-3xl font-bold text-gray-800">{patients.length}</span>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-3 text-sm font-medium">
+                  <div className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg"><span className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div> Active</span><span className="text-gray-900">{statusCounts.active}</span></div>
+                  <div className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg"><span className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm"></div> Pending</span><span className="text-gray-900">{statusCounts.pending}</span></div>
+                  <div className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg"><span className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-slate-400 shadow-sm"></div> Inactive</span><span className="text-gray-900">{statusCounts.inactive}</span></div>
+                </div>
+              </div>
+           </div>
+        </div>
+      );
+    };
+
+    // เชื่อมต่อ React เข้ากับ DOM
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

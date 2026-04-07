@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Kid - Hug Dee Home Clinic</title>
+  <title>ClinicCare - Clinic Management System</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -24,10 +24,9 @@
     .swal2-html-container { color: #64748b !important; font-size: 0.95rem !important; margin-top: 0.5rem !important; }
     .swal2-confirm { border-radius: 0.75rem !important; font-weight: 500 !important; padding: 0.6rem 1.5rem !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; }
     
-    /* Print Styles - แก้ไขให้สามารถเลื่อนพิมพ์ได้หลายหน้า */
+    /* Print Styles */
     @media print {
       @page { size: A4 portrait; margin: 15mm 10mm; }
-      /* ปลดล็อกความสูงของโครงสร้างหลักทั้งหมดตอนพิมพ์ */
       html, body, #root { height: auto !important; min-height: 100% !important; overflow: visible !important; display: block !important; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; font-family: 'Kanit', sans-serif; }
       .print-preview-container { padding: 0 !important; box-shadow: none !important; max-width: none !important; margin: 0 !important; }
@@ -39,28 +38,19 @@
   </style>
 </head>
 <body>
-  <!-- จุดที่ React จะนำหน้าเว็บมาแสดงผล -->
   <div id="root"></div>
 
   <!-- React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <!-- Fix สำหรับ Lucide React UMD ที่หา global.react ไม่เจอ -->
   <script>window.react = window.React;</script>
-  
-  <!-- Babel (สำหรับแปลภาษา JSX ให้เบราว์เซอร์อ่านออก) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  
-  <!-- เปลี่ยนมาใช้ jsdelivr เพื่อความเสถียรที่มากขึ้น -->
   <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
 
-  <!-- โค้ดระบบคลินิกทั้งหมด -->
   <script type="text/babel">
-    // ดึงฟังก์ชันของ React
     const { useState, useEffect, useMemo } = React;
     
-    // ดึงไอคอนจาก Lucide อย่างปลอดภัย (ป้องกันแอปล่มกรณีโหลดไอคอนไม่สำเร็จ)
     const lucide = window.LucideReact || window.lucideReact || window.lucide || {};
     const FallbackIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
     const getIcon = (name) => lucide[name] || FallbackIcon;
@@ -93,9 +83,8 @@
     const Package = getIcon('Package');
     const Clock = getIcon('Clock');
     const Filter = getIcon('Filter');
-    const RefreshCw = getIcon('RefreshCw'); // เพิ่มปุ่มไอคอน Refresh
+    const RefreshCw = getIcon('RefreshCw');
 
-    // --- Configuration & Translations ---
     const THEME = {
       primary: '#eec676',
       primaryHover: '#dcb360',
@@ -105,6 +94,7 @@
       textLight: '#64748b'
     };
 
+    // ⚠️ สำคัญมาก: นำ URL ที่ได้จากการ Deploy -> New Version ในขั้นตอนที่ 1 มาวางทับตรงนี้
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyOa6uYwxadjHzw3uXGNbk0QxNBSc35ZWeX0kgYg-F5M8qMEYo9xx6Y52EMCXn5UiEd/exec";
 
     const DICT = {
@@ -171,7 +161,7 @@
       },
       en: {
         login_title: 'Welcome Back',
-        login_sub: 'Sign in to My Kid',
+        login_sub: 'Sign in to ClinicCare',
         username: 'Username / HN',
         password: 'Password / Phone',
         signin: 'Sign In',
@@ -232,7 +222,6 @@
       }
     };
 
-    // --- Helper Functions สำหรับจัดการวันที่ให้แม่นยำ ---
     const formatThaiDate = (dateStr) => {
       if (!dateStr) return '-';
       const date = new Date(dateStr);
@@ -278,7 +267,6 @@
       return url;
     };
 
-    // --- API Utility ---
     const fetchGAS = async (action, payload = {}) => {
       try {
         const response = await fetch(GAS_URL, {
@@ -287,15 +275,29 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action, payload })
         });
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error || "Unknown API Error");
-        return result.data;
-      } catch (error) {
-        // เพิ่ม "ไม่ได้ใช้บริการ" เพื่อซ่อน Console Error สีแดง แต่จะยังโยน Error ให้หน้าจอแสดงผลได้ตามปกติ
-        const isLoginError = error.message.includes("Invalid credentials") || error.message.includes("ไม่ถูกต้อง") || error.message.includes("ไม่ได้ใช้บริการ");
-        const isActionError = error.message.includes("Invalid action");
         
-        if (!isLoginError && !isActionError) {
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+            if (text.toLowerCase().includes('<html')) {
+                throw new Error("เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ: สิทธิ์การเข้าถึง GAS อาจยังไม่เป็น 'Anyone' (ทุกคน) หรือ URL ไม่ถูกต้อง");
+            }
+            throw new Error("การตอบกลับจากเซิร์ฟเวอร์ผิดพลาด: " + text.substring(0, 100));
+        }
+
+        if (result.success === false || result.status === 'error') {
+            const errMsg = result.error || result.message || (typeof result === 'string' ? result : JSON.stringify(result));
+            throw new Error(errMsg);
+        }
+
+        return result.data !== undefined ? result.data : result;
+      } catch (error) {
+        const isLoginError = error.message.includes("Invalid credentials") || error.message.includes("ไม่ถูกต้อง") || error.message.includes("ไม่ได้ใช้บริการ");
+        const isActionError = error.message.includes("Invalid action") || error.message.includes("Unknown Action") || error.message.includes("ไม่พบคำสั่ง");
+        
+        if (!isLoginError && !isActionError && action !== 'getConfig' && action !== 'login') {
           console.error(`GAS API Error [${action}]:`, error);
         }
         throw error;
@@ -337,18 +339,18 @@
       const [globalPatients, setGlobalPatients] = useState([]);
       const [clinicConfig, setClinicConfig] = useState(null);
       const [loadingGlobal, setLoadingGlobal] = useState(false);
-      const [refreshTrigger, setRefreshTrigger] = useState(0); // ควบคุมการ Refresh ข้อมูล
+      const [refreshTrigger, setRefreshTrigger] = useState(0); 
 
       const t = DICT[lang];
 
       useEffect(() => {
         fetchGAS('getConfig')
-          .then(data => setClinicConfig(data))
-          .catch(err => {
-            if (err && err.message && !err.message.includes('Invalid action')) {
-              console.error("Failed to load config:", err);
+          .then(data => {
+            if(data && Object.keys(data).length > 0) {
+              setClinicConfig(data);
             }
-          });
+          })
+          .catch(err => {});
       }, []);
 
       const refreshGlobalPatients = async (currentUser) => {
@@ -359,16 +361,19 @@
           const data = await fetchGAS('getPatients', { role: currentUser.role, username: currentUser.username });
           setGlobalPatients(Array.isArray(data) ? data : []);
           
-          const configData = await fetchGAS('getConfig').catch(() => null);
-          if (configData) setClinicConfig(configData);
+          fetchGAS('getConfig').then(data => {
+             if(data && Object.keys(data).length > 0) setClinicConfig(data);
+          }).catch(() => {});
         } catch (err) {
-          // 
+          console.error("Fetch Patients Error:", err);
+          if (window.Swal) {
+             window.Swal.fire({ title: 'เกิดข้อผิดพลาดในการดึงข้อมูล', text: err.message || 'ไม่สามารถโหลดข้อมูลผู้รับบริการได้', icon: 'error', confirmButtonColor: THEME.primary });
+          }
         } finally {
           setLoadingGlobal(false);
         }
       };
 
-      // ฟังก์ชันเมื่อกดปุ่ม Refresh ด้านบน
       const handleGlobalRefresh = () => {
         setRefreshTrigger(prev => prev + 1);
         if (user && user.role !== 'parent') {
@@ -489,7 +494,6 @@
                 </div>
                 <div className="flex items-center gap-2 sm:gap-4">
                   
-                  {/* ปุ่ม Refresh ถูกเพิ่มเข้ามาตรงนี้เพื่อให้อยู่ทุกหน้า */}
                   <button 
                     onClick={handleGlobalRefresh}
                     className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-[#eec676] hover:text-white transition-colors"
@@ -1153,7 +1157,7 @@
     };
 
     // --- OPD View ---
-    const OPDView = ({ t, user, patients, initialHn, clinicConfig }) => {
+    const OPDView = ({ t, user, patients, initialHn, clinicConfig, refreshTrigger }) => {
       const [selectedHn, setSelectedHn] = useState(initialHn || '');
       const [history, setHistory] = useState([]);
       const [loadingHistory, setLoadingHistory] = useState(false);
@@ -1194,7 +1198,7 @@
           setCurrentPage(1);
           cancelEditOPD();
         }
-      }, [selectedHn]);
+      }, [selectedHn, refreshTrigger]); // อัปเดตข้อมูลเมื่อมีการกดรีเฟรช
 
       const loadHistory = async (hn) => {
         setLoadingHistory(true);

@@ -28,13 +28,11 @@
     @media print {
       @page { size: A4 portrait; margin: 15mm 10mm; }
       html, body, #root { height: auto !important; min-height: 100% !important; overflow: visible !important; display: block !important; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; font-family: 'Kanit', sans-serif; counter-reset: page; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; font-family: 'Kanit', sans-serif; }
       .print-preview-container { padding: 0 !important; box-shadow: none !important; max-width: none !important; margin: 0 !important; }
       .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
       thead { display: table-header-group; }
-      tfoot { display: table-footer-group; }
       ::-webkit-scrollbar { display: none; }
-      .page-number::after { counter-increment: page; content: counter(page); }
     }
   </style>
 </head>
@@ -578,11 +576,73 @@
     const PrintPreview = ({ type, patient, history = [], clinicConfig, t, onClose }) => {
       const isBlank = type === 'blank';
 
-      return (
-        <div className="fixed inset-0 z-[9999] bg-gray-600 overflow-y-auto flex flex-col print:static print:h-auto print:bg-white print:block print:overflow-visible font-sans" style={{ fontFamily: "'Kanit', sans-serif" }}>
+      // จำลองระบบตัดหน้ากระดาษ A4 เพื่อแก้ปัญหาเบราว์เซอร์ไม่นับเลขหน้าให้
+      const pages = useMemo(() => {
+        const result = [];
+        const FIRST_PAGE_LIMIT = 8; // จำนวนประวัติในหน้าแรก (เว้นที่ให้หัวกระดาษ)
+        const NEXT_PAGE_LIMIT = 15; // จำนวนประวัติในหน้าถัดไป
+
+        if (isBlank) {
+          result.push({
+            pageNum: 1,
+            isFirstPage: true,
+            items: Array(FIRST_PAGE_LIMIT).fill(0).map(() => ({ isEmpty: true }))
+          });
+          result.push({
+            pageNum: 2,
+            isFirstPage: false,
+            items: Array(NEXT_PAGE_LIMIT).fill(0).map(() => ({ isEmpty: true }))
+          });
+        } else {
+          let currentIndex = 0;
+          let pageNum = 1;
+
+          if (history.length === 0) {
+            result.push({
+              pageNum: 1,
+              isFirstPage: true,
+              items: Array(FIRST_PAGE_LIMIT).fill(0).map(() => ({ isEmpty: true }))
+            });
+          }
+
+          while (currentIndex < history.length) {
+            const isFirstPage = pageNum === 1;
+            const limit = isFirstPage ? FIRST_PAGE_LIMIT : NEXT_PAGE_LIMIT;
+            const chunk = history.slice(currentIndex, currentIndex + limit);
+
+            // เติมช่องว่างให้เต็มหน้ากระดาษ A4 พอดี
+            const filledChunk = [...chunk];
+            while (filledChunk.length < limit) {
+              filledChunk.push({ isEmpty: true });
+            }
+
+            result.push({
+              pageNum,
+              isFirstPage,
+              items: filledChunk
+            });
+
+            currentIndex += limit;
+            pageNum++;
+          }
+        }
+        return result;
+      }, [isBlank, history]);
+
+      const previewContent = (
+        <div id="print-portal-root" className="fixed inset-0 z-[9999] bg-gray-600 overflow-y-auto flex flex-col print:static print:h-auto print:bg-white print:block print:overflow-visible font-sans" style={{ fontFamily: "'Kanit', sans-serif" }}>
+          <style>
+            {`
+              @media print {
+                body > *:not(#print-portal-root) {
+                  display: none !important;
+                }
+              }
+            `}
+          </style>
           
           {/* Action Bar (ซ่อนตอนปริ้น) */}
-          <div className="sticky top-0 bg-gray-800 text-white p-4 flex justify-between items-center print:hidden shadow-md z-50">
+          <div className="sticky top-0 bg-gray-800 text-white p-4 flex justify-between items-center print:hidden shadow-md z-50 shrink-0">
             <h3 className="font-medium text-lg">ตัวอย่างก่อนพิมพ์ (A4)</h3>
             <div className="flex gap-3">
               <button onClick={() => window.print()} className="bg-[#eec676] hover:bg-[#dcb360] text-gray-900 px-5 py-2 rounded-lg flex items-center gap-2 font-medium shadow-sm transition-colors">
@@ -595,15 +655,13 @@
           </div>
 
           {/* กระดาษ A4 เสมือน */}
-          <div className="max-w-[210mm] print-preview-container bg-white mx-auto my-8 p-10 shadow-2xl print:m-0 print:p-0 print:shadow-none print:w-full text-black print:min-h-0 min-h-[297mm]">
-            
-            <table className="w-full text-[12px] border-collapse">
-              <thead className="table-header-group">
-                {/* --- HEADER และ SECTION 1 (ย้ายมาอยู่ใน thead เพื่อให้ออกซ้ำทุกหน้าเมื่อขึ้นหน้าใหม่) --- */}
-                <tr>
-                  <th colSpan="3" className="font-normal text-left p-0">
-                    
-                    {/* Header - พิมพ์ทุกหน้า */}
+          <div className="print-preview-container bg-transparent mx-auto my-8 print:m-0 print:w-full space-y-8 print:space-y-0">
+            {pages.map((page, index) => (
+              <div key={index} className="bg-white p-10 shadow-2xl print:shadow-none print:p-0 min-h-[297mm] w-[210mm] print:w-full relative flex flex-col box-border" style={{ pageBreakAfter: index === pages.length - 1 ? 'auto' : 'always' }}>
+                
+                {page.isFirstPage ? (
+                  <div className="shrink-0">
+                    {/* Header - พิมพ์เฉพาะหน้าแรก */}
                     <div className="flex justify-between items-start border-b border-gray-200 pb-4 mb-6 pt-2">
                       <div className="flex gap-4 items-center">
                         {clinicConfig?.LogoUrl && (
@@ -629,10 +687,9 @@
                       <h2 className="text-xl font-bold text-[#eec676] pt-1 uppercase">OPD CARD</h2>
                     </div>
 
-                    {/* Section 1: ข้อมูลผู้รับบริการ - พิมพ์ทุกหน้า */}
+                    {/* Section 1: ข้อมูลผู้รับบริการ - พิมพ์เฉพาะหน้าแรก */}
                     <div className="mb-8">
                       <h3 className="text-[14px] font-bold text-gray-800 mb-4">ส่วนที่ 1: ข้อมูลผู้รับบริการ</h3>
-                      
                       <div className="flex flex-col gap-4 text-[12px]">
                         <div className="flex gap-4">
                            <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">HN:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.HN}</div></div>
@@ -662,56 +719,66 @@
                          )}
                       </div>
                     </div>
-                  </th>
-                </tr>
-
-                {/* Section 2 Header */}
-                <tr>
-                  <th colSpan="3" className="text-left pb-2 font-bold text-[14px] pt-2">
-                    ส่วนที่ 2: ประวัติการรับบริการ
-                  </th>
-                </tr>
-                <tr className="border-t-2 border-b-2 border-gray-900">
-                  <th className="py-2.5 px-2 text-left w-[18%] font-bold">วัน/เดือน/ปี</th>
-                  <th className="py-2.5 px-2 text-left w-[62%] font-bold">รายละเอียด</th>
-                  <th className="py-2.5 px-2 text-center w-[20%] font-bold">นักกิจกรรมบำบัด</th>
-                </tr>
-              </thead>
-              
-              <tbody className="table-row-group">
-                {type === 'filled' && history.length > 0 ? (
-                  history.map((h, i) => (
-                    <tr key={i} className="border-b border-gray-300 print-break-inside-avoid">
-                      <td className="py-3 px-2 align-top">{h.Date ? formatThaiDate(h.Date) : ''}</td>
-                      <td className="py-3 px-2 align-top whitespace-pre-line leading-relaxed">{h.Details}</td>
-                      <td className="py-3 px-2 align-top text-center">{h.Therapist}</td>
-                    </tr>
-                  ))
+                  </div>
                 ) : (
-                  Array(14).fill(0).map((_, i) => (
-                    <tr key={i} className="border-b border-gray-300 print-break-inside-avoid">
-                      <td className="py-3 px-2 h-10"></td>
-                      <td className="py-3 px-2 h-10"></td>
-                      <td className="py-3 px-2 h-10"></td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-
-              <tfoot className="table-footer-group">
-                <tr>
-                  <td colSpan="3" className="pt-6 pb-2">
-                    <div className="flex justify-end text-[12px] text-gray-600 font-medium">
-                      หน้าที่ <span className="page-number ml-1"></span>
+                  <div className="shrink-0 mb-4 mt-2">
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12px] font-medium border-b border-gray-800 pb-3">
+                       <div className="flex items-end"><span className="font-bold mr-2">HN:</span><span>{isBlank ? '.........................' : patient?.HN}</span></div>
+                       <div className="flex items-end"><span className="font-bold mr-2">ชื่อ-สกุล:</span><span>{isBlank ? '..................................................' : `${patient?.Name || ''} ${patient?.LastName || ''}`}</span></div>
+                       <div className="flex items-end"><span className="font-bold mr-2">ชื่อเล่น:</span><span>{isBlank ? '.........................' : patient?.Nickname}</span></div>
+                       <div className="flex items-end"><span className="font-bold mr-2">ประวัติการแพ้ยา:</span><span className="text-red-600">{isBlank ? '.........................' : (patient?.Allergy || '-')}</span></div>
                     </div>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  </div>
+                )}
 
+                {/* Section 2: ตารางประวัติ */}
+                <div className="flex-1">
+                  <table className="w-full text-[12px] border-collapse">
+                    <thead>
+                      <tr>
+                        <th colSpan="3" className="text-left pb-2 font-bold text-[14px]">
+                          ส่วนที่ 2: ประวัติการรับบริการ {page.pageNum > 1 ? '(ต่อ)' : ''}
+                        </th>
+                      </tr>
+                      <tr className="border-t-2 border-b-2 border-gray-900">
+                        <th className="py-2.5 px-2 text-left w-[18%] font-bold">วัน/เดือน/ปี</th>
+                        <th className="py-2.5 px-2 text-left w-[62%] font-bold">รายละเอียด</th>
+                        <th className="py-2.5 px-2 text-center w-[20%] font-bold">นักกิจกรรมบำบัด</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {page.items.map((row, rIndex) => (
+                        <tr key={rIndex} className="border-b border-gray-300 print-break-inside-avoid">
+                          {row.isEmpty ? (
+                            <React.Fragment>
+                              <td className="py-3 px-2 h-[40px]"></td>
+                              <td className="py-3 px-2 h-[40px]"></td>
+                              <td className="py-3 px-2 h-[40px]"></td>
+                            </React.Fragment>
+                          ) : (
+                            <React.Fragment>
+                              <td className="py-3 px-2 align-top">{row.Date ? formatThaiDate(row.Date) : ''}</td>
+                              <td className="py-3 px-2 align-top whitespace-pre-line leading-relaxed">{row.Details}</td>
+                              <td className="py-3 px-2 align-top text-center">{row.Therapist}</td>
+                            </React.Fragment>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-auto pt-4 pb-2 flex justify-end text-[12px] text-gray-600 font-medium shrink-0">
+                  หน้าที่ {page.pageNum}
+                </div>
+
+              </div>
+            ))}
           </div>
         </div>
       );
+
+      return ReactDOM.createPortal(previewContent, document.body);
     };
 
 
@@ -1082,101 +1149,99 @@
       };
 
       return (
-        <div className="animate-in fade-in duration-500 h-full flex flex-col">
+        <React.Fragment>
           {showBlankPrint && (
             <PrintPreview type="blank" t={t} clinicConfig={clinicConfig} onClose={() => setShowBlankPrint(false)} />
           )}
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{t.patients}</h2>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowBlankPrint(true)} className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl transition-all font-medium shadow-sm">
-                <Printer size={18} /> {t.print_blank}
-              </button>
-              {(user.role === 'admin' || user.role === 'staff' || user.role === 'employee') && (
-                <button onClick={openAddModal} className="flex items-center gap-2 bg-[#eec676] hover:bg-[#dcb360] text-white px-5 py-2.5 rounded-xl transition-all font-medium shadow-sm hover:shadow-md">
-                  <Plus size={18} /> {t.add_patient}
+          <div className={`animate-in fade-in duration-500 h-full flex flex-col print:hidden ${showBlankPrint ? 'hidden' : 'flex'}`}>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">{t.patients}</h2>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowBlankPrint(true)} className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl transition-all font-medium shadow-sm">
+                  <Printer size={18} /> {t.print_blank}
                 </button>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 shrink-0 bg-white z-20 relative">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input type="text" placeholder={t.search_patient} className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-transparent focus:bg-white focus:border-[#eec676] focus:ring-2 focus:ring-[#eec676]/20 rounded-xl outline-none transition-all text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                {(user.role === 'admin' || user.role === 'staff' || user.role === 'employee') && (
+                  <button onClick={openAddModal} className="flex items-center gap-2 bg-[#eec676] hover:bg-[#dcb360] text-white px-5 py-2.5 rounded-xl transition-all font-medium shadow-sm hover:shadow-md">
+                    <Plus size={18} /> {t.add_patient}
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="overflow-y-auto flex-1 p-0">
-              <table className="w-full text-left border-collapse relative">
-                <thead className="sticky top-0 bg-gray-50/90 backdrop-blur-sm z-10 border-b border-gray-100">
-                  <tr className="text-gray-500 text-xs uppercase tracking-wider">
-                    <th className="p-4 font-medium whitespace-nowrap">{t.hn}</th>
-                    <th className="p-4 font-medium">{t.patient_info}</th>
-                    <th className="p-4 font-medium whitespace-nowrap">{t.status}</th>
-                    <th className="p-4 font-medium whitespace-nowrap">{t.contact}</th>
-                    <th className="p-4 font-medium text-right whitespace-nowrap">{t.actions}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredPatients.length === 0 ? (
-                    <tr><td colSpan="5" className="p-12 text-center text-gray-500">{t.no_data}</td></tr>
-                  ) : (
-                    filteredPatients.map((p, i) => (
-                      <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
-                        <td className="p-4 text-sm font-medium text-gray-900">{p.HN}</td>
-                        <td className="p-4">
-                          <p className="text-sm font-semibold text-gray-900">{p.Name} {p.LastName}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Nickname: {p.Nickname || '-'}</p>
-                        </td>
-                        <td className="p-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium uppercase ${p.Status?.toLowerCase() === 'active' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}`}>
-                            {p.Status || 'Unknown'}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm text-gray-600">{p.Phone}</td>
-                        <td className="p-4 text-right space-x-2 flex justify-end">
-                           <button onClick={() => onNavOPD(p.HN)} className="p-2 text-[#eec676] hover:bg-[#eec676]/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-[#eec676]/30" title={t.view_details}>
-                             <ClipboardList size={16} /> {t.opd}
-                           </button>
-                           {(user.role === 'admin' || user.role === 'staff' || user.role === 'employee') && (
-                             <button onClick={() => openEditModal(p)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-blue-200" title={t.edit_patient}>
-                               <Edit size={16} /> {t.edit_patient}
-                             </button>
-                           )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 shrink-0 bg-white z-20 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input type="text" placeholder={t.search_patient} className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-transparent focus:bg-white focus:border-[#eec676] focus:ring-2 focus:ring-[#eec676]/20 rounded-xl outline-none transition-all text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              </div>
 
-          <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title={editingPatient?.Name ? t.edit_patient : t.add_patient}>
-            {editingPatient && (
+              <div className="overflow-y-auto flex-1 p-0">
+                <table className="w-full text-left border-collapse relative">
+                  <thead className="sticky top-0 bg-gray-50/90 backdrop-blur-sm z-10 border-b border-gray-100">
+                    <tr className="text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="p-4 font-medium whitespace-nowrap">{t.hn}</th>
+                      <th className="p-4 font-medium">{t.patient_info}</th>
+                      <th className="p-4 font-medium whitespace-nowrap">{t.status}</th>
+                      <th className="p-4 font-medium whitespace-nowrap">{t.contact}</th>
+                      <th className="p-4 font-medium text-right whitespace-nowrap">{t.actions}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredPatients.length === 0 ? (
+                      <tr><td colSpan="5" className="p-12 text-center text-gray-500">{t.no_data}</td></tr>
+                    ) : (
+                      filteredPatients.map((p, i) => (
+                        <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
+                          <td className="p-4 text-sm font-medium text-gray-900">{p.HN}</td>
+                          <td className="p-4">
+                            <p className="text-sm font-semibold text-gray-900">{p.Name} {p.LastName}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Nickname: {p.Nickname || '-'}</p>
+                          </td>
+                          <td className="p-4">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium uppercase ${p.Status?.toLowerCase() === 'active' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}`}>
+                              {p.Status || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-gray-600">{p.Phone}</td>
+                          <td className="p-4 text-right space-x-2 flex justify-end">
+                             <button onClick={() => onNavOPD(p.HN)} className="p-2 text-[#eec676] hover:bg-[#eec676]/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-[#eec676]/30" title={t.view_details}>
+                               <ClipboardList size={16} /> {t.opd}
+                             </button>
+                             {(user.role === 'admin' || user.role === 'staff' || user.role === 'employee') && (
+                               <button onClick={() => openEditModal(p)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-blue-200" title={t.edit_patient}>
+                                 <Edit size={16} /> {t.edit_patient}
+                               </button>
+                             )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title={editingPatient?.Name ? t.edit_patient : t.add_patient}>
               <form onSubmit={handleSavePatient} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.hn}</label><input required value={editingPatient.HN} onChange={e => setEditingPatient({...editingPatient, HN: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none" readOnly={!!editingPatient.Name} /></div>
-                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.status}</label><select value={editingPatient.Status} onChange={e => setEditingPatient({...editingPatient, Status: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-[#eec676]"><option>Active</option><option>Pending</option><option>Inactive</option></select></div>
-                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Name</label><input required value={editingPatient.Name} onChange={e => setEditingPatient({...editingPatient, Name: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Last Name</label><input required value={editingPatient.LastName} onChange={e => setEditingPatient({...editingPatient, LastName: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Nickname</label><input value={editingPatient.Nickname} onChange={e => setEditingPatient({...editingPatient, Nickname: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.hn}</label><input required value={editingPatient?.HN || ''} onChange={e => setEditingPatient({...editingPatient, HN: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none" readOnly={!!editingPatient?.Name} /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.status}</label><select value={editingPatient?.Status || 'Active'} onChange={e => setEditingPatient({...editingPatient, Status: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-[#eec676]"><option>Active</option><option>Pending</option><option>Inactive</option></select></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Name</label><input required value={editingPatient?.Name || ''} onChange={e => setEditingPatient({...editingPatient, Name: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Last Name</label><input required value={editingPatient?.LastName || ''} onChange={e => setEditingPatient({...editingPatient, LastName: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Nickname</label><input value={editingPatient?.Nickname || ''} onChange={e => setEditingPatient({...editingPatient, Nickname: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
                   <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.gender}</label>
-                    <select value={editingPatient.Gender} onChange={e => setEditingPatient({...editingPatient, Gender: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-[#eec676]">
+                    <select value={editingPatient?.Gender || 'ชาย'} onChange={e => setEditingPatient({...editingPatient, Gender: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-[#eec676]">
                       <option value="ชาย">ชาย (Male)</option>
                       <option value="หญิง">หญิง (Female)</option>
                     </select>
                   </div>
-                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.dob}</label><input type="date" value={editingPatient.DOB} onChange={e => setEditingPatient({...editingPatient, DOB: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.age}</label><input type="number" value={editingPatient.Age} onChange={e => setEditingPatient({...editingPatient, Age: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
-                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.contact}</label><input required value={editingPatient.Phone} onChange={e => setEditingPatient({...editingPatient, Phone: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
-                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">ประวัติการแพ้ยา (Allergy)</label><input type="text" value={editingPatient.Allergy || ''} onChange={e => setEditingPatient({...editingPatient, Allergy: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" placeholder="ระบุประวัติการแพ้ยา (ถ้ามี)" /></div>
-                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.general_info}</label><textarea rows={3} value={editingPatient.Symptom} onChange={e => setEditingPatient({...editingPatient, Symptom: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676] resize-none"></textarea></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.dob}</label><input type="date" value={editingPatient?.DOB || ''} onChange={e => setEditingPatient({...editingPatient, DOB: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.age}</label><input type="number" value={editingPatient?.Age || ''} onChange={e => setEditingPatient({...editingPatient, Age: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.contact}</label><input required value={editingPatient?.Phone || ''} onChange={e => setEditingPatient({...editingPatient, Phone: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">ประวัติการแพ้ยา (Allergy)</label><input type="text" value={editingPatient?.Allergy || ''} onChange={e => setEditingPatient({...editingPatient, Allergy: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" placeholder="ระบุประวัติการแพ้ยา (ถ้ามี)" /></div>
+                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.general_info}</label><textarea rows={3} value={editingPatient?.Symptom || ''} onChange={e => setEditingPatient({...editingPatient, Symptom: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676] resize-none"></textarea></div>
                 </div>
                 <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-gray-100">
                   <button type="button" onClick={() => setModalOpen(false)} className="px-5 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-medium transition-colors">{t.cancel}</button>
@@ -1185,9 +1250,9 @@
                   </button>
                 </div>
               </form>
-            )}
-          </Modal>
-        </div>
+            </Modal>
+          </div>
+        </React.Fragment>
       );
     };
 
@@ -1200,6 +1265,7 @@
       const [uploadFile, setUploadFile] = useState(null);
       const [savingOPD, setSavingOPD] = useState(false);
       const [printType, setPrintType] = useState(null); 
+      const [selectedOPD, setSelectedOPD] = useState(null);
       
       const [therapistsList, setTherapistsList] = useState([]);
 
@@ -1559,6 +1625,40 @@
               </div>
             )}
           </div>
+
+          <Modal isOpen={!!selectedOPD} onClose={() => setSelectedOPD(null)} title="รายละเอียดการรับบริการ">
+            {selectedOPD && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <div>
+                    <p className="text-xs text-gray-500">{t.date}</p>
+                    <p className="font-semibold text-gray-900">{formatThaiDate(selectedOPD.Date)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">{t.therapist}</p>
+                    <p className="font-medium text-[#dcb360] bg-[#eec676]/10 px-3 py-1 rounded-full text-sm inline-block mt-1">{selectedOPD.Therapist}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">{t.details}</p>
+                  <div className="bg-gray-50 p-4 rounded-2xl text-sm text-gray-700 whitespace-pre-line leading-relaxed border border-gray-100">
+                    {selectedOPD.Details}
+                  </div>
+                </div>
+
+                {selectedOPD.FileUrl && (
+                  <div>
+                     <p className="text-xs font-medium text-gray-500 mb-2">ไฟล์แนบ</p>
+                     <a href={selectedOPD.FileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-medium hover:bg-blue-100 transition-colors">
+                       <FileText size={16} /> ดูเอกสารแนบ
+                     </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </Modal>
+
         </React.Fragment>
       );
     };

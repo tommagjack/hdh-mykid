@@ -28,29 +28,39 @@
     @media print {
       @page { size: A4 portrait; margin: 15mm 10mm; }
       html, body, #root { height: auto !important; min-height: 100% !important; overflow: visible !important; display: block !important; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; font-family: 'Kanit', sans-serif; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; font-family: 'Kanit', sans-serif; counter-reset: page; }
       .print-preview-container { padding: 0 !important; box-shadow: none !important; max-width: none !important; margin: 0 !important; }
       .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
       ::-webkit-scrollbar { display: none; }
+      .page-number::after { counter-increment: page; content: counter(page); }
     }
   </style>
 </head>
 <body>
+  <!-- จุดที่ React จะนำหน้าเว็บมาแสดงผล -->
   <div id="root"></div>
 
   <!-- React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
+  <!-- Fix สำหรับ Lucide React UMD ที่หา global.react ไม่เจอ -->
   <script>window.react = window.React;</script>
+  
+  <!-- Babel (สำหรับแปลภาษา JSX ให้เบราว์เซอร์อ่านออก) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- เปลี่ยนมาใช้ jsdelivr เพื่อความเสถียรที่มากขึ้น -->
   <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
 
+  <!-- โค้ดระบบคลินิกทั้งหมด -->
   <script type="text/babel">
+    // ดึงฟังก์ชันของ React
     const { useState, useEffect, useMemo } = React;
     
+    // ดึงไอคอนจาก Lucide อย่างปลอดภัย
     const lucide = window.LucideReact || window.lucideReact || window.lucide || {};
     const FallbackIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
     const getIcon = (name) => lucide[name] || FallbackIcon;
@@ -85,6 +95,7 @@
     const Filter = getIcon('Filter');
     const RefreshCw = getIcon('RefreshCw');
 
+    // --- Configuration & Translations ---
     const THEME = {
       primary: '#eec676',
       primaryHover: '#dcb360',
@@ -94,13 +105,12 @@
       textLight: '#64748b'
     };
 
-    // ⚠️ สำคัญมาก: นำ URL ที่ได้จากการ Deploy -> New Version ในขั้นตอนที่ 1 มาวางทับตรงนี้
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyOa6uYwxadjHzw3uXGNbk0QxNBSc35ZWeX0kgYg-F5M8qMEYo9xx6Y52EMCXn5UiEd/exec";
 
     const DICT = {
       th: {
         login_title: 'ยินดีต้อนรับ',
-        login_sub: 'เข้าสู่ระบบ My Kid',
+        login_sub: 'เข้าสู่ระบบ ClinicCare',
         username: 'ชื่อผู้ใช้ / รหัส (HN)',
         password: 'รหัสผ่าน / เบอร์โทร',
         signin: 'เข้าสู่ระบบ',
@@ -222,6 +232,7 @@
       }
     };
 
+    // --- Helper Functions ---
     const formatThaiDate = (dateStr) => {
       if (!dateStr) return '-';
       const date = new Date(dateStr);
@@ -267,6 +278,7 @@
       return url;
     };
 
+    // --- API Utility ---
     const fetchGAS = async (action, payload = {}) => {
       try {
         const response = await fetch(GAS_URL, {
@@ -428,8 +440,8 @@
                   <div className="flex flex-col justify-center truncate">
                     {clinicConfig?.ClinicName?.includes('บ้านฮักดี') ? (
                       <React.Fragment>
-                        <span className="text-[14px] leading-tight font-bold text-gray-800">คลินิกพัฒนาการเด็ก</span>
-                        <span className="text-[14px] leading-tight font-bold text-[#eec676]">บ้านฮักดี</span>
+                        <span className="text-[16px] leading-tight font-bold text-[#eec676]">บ้านฮักดี</span>
+                        <span className="text-[12px] leading-tight font-bold text-gray-800 truncate">{clinicConfig.ClinicName.replace('บ้านฮักดี', '').trim()}</span>
                       </React.Fragment>
                     ) : (
                       <span className="text-[15px] leading-tight font-bold text-gray-800 truncate" title={clinicConfig?.ClinicName || 'ClinicCare'}>
@@ -585,64 +597,77 @@
           {/* กระดาษ A4 เสมือน */}
           <div className="max-w-[210mm] print-preview-container bg-white mx-auto my-8 p-10 shadow-2xl print:m-0 print:p-0 print:shadow-none print:w-full text-black print:min-h-0 min-h-[297mm]">
             
-            {/* Header - พิมพ์เฉพาะหน้าแรก */}
-            <div className="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
-              <div className="flex gap-4 items-center">
-                {clinicConfig?.LogoUrl && (
-                  <img src={formatImageUrl(clinicConfig.LogoUrl)} alt="Logo" className="w-16 h-16 object-contain rounded-full" />
-                )}
-                <div>
-                  <h1 className="text-lg font-bold text-gray-900 mb-1">
-                    {clinicConfig?.ClinicName?.includes('บ้านฮักดี') ? (
-                      <React.Fragment>คลินิกพัฒนาการเด็ก<br/>บ้านฮักดี</React.Fragment>
-                    ) : (
-                      clinicConfig?.ClinicName || 'ชื่อคลินิก'
-                    )}
-                  </h1>
-                  <p className="text-[10px] text-gray-600 mb-0.5">{clinicConfig?.Address || '-'}</p>
-                  <p className="text-[10px] text-gray-600">
-                    โทร. {clinicConfig?.Phone || '-'} | Line ID: {clinicConfig?.LineID || clinicConfig?.LineId || '-'} | Email: {clinicConfig?.Email || '-'}
-                  </p>
-                </div>
-              </div>
-              <h2 className="text-xl font-bold text-[#eec676] pt-1 uppercase">OPD CARD</h2>
-            </div>
-
-            {/* Section 1: ข้อมูลผู้รับบริการ - พิมพ์เฉพาะหน้าแรก */}
-            <div className="mb-8">
-              <h3 className="text-[14px] font-bold text-gray-800 mb-4">ส่วนที่ 1: ข้อมูลผู้รับบริการ</h3>
-              
-              <div className="flex flex-col gap-4 text-[12px]">
-                <div className="flex gap-4">
-                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">HN:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.HN}</div></div>
-                   <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อ-สกุล:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : `${patient?.Name || ''} ${patient?.LastName || ''}`}</div></div>
-                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อเล่น:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Nickname}</div></div>
-                </div>
-                <div className="flex gap-4">
-                   <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">วัน/เดือน/ปีเกิด:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : formatThaiDate(patient?.DOB)}</div></div>
-                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">อายุ:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Age}</div></div>
-                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">เพศ:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Gender}</div></div>
-                </div>
-                <div className="flex gap-4">
-                   <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อ-สกุล ผู้ปกครอง:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.ParentName}</div></div>
-                   <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">โทร:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Phone}</div></div>
-                   <div className="flex-1"></div>
-                </div>
-                <div className="flex mt-2">
-                   <span className="font-semibold whitespace-nowrap mr-2 pt-1">อาการเบื้องต้น:</span>
-                   <div className="border-b border-dotted border-gray-500 flex-1 px-2 leading-relaxed min-h-[24px]">{isBlank ? '' : patient?.Symptom}</div>
-                </div>
-                 {isBlank && (
-                    <div className="border-b border-dotted border-gray-500 w-full mt-4 min-h-[20px]"></div>
-                 )}
-              </div>
-            </div>
-
-            {/* Section 2: ตารางประวัติ (รองรับการขึ้นหน้าใหม่) */}
             <table className="w-full text-[12px] border-collapse">
               <thead className="table-header-group">
+                {/* --- HEADER และ SECTION 1 (ย้ายมาอยู่ใน thead เพื่อให้ออกซ้ำทุกหน้าเมื่อขึ้นหน้าใหม่) --- */}
                 <tr>
-                  <th colSpan="3" className="text-left pb-2 font-bold text-[14px] pt-4">
+                  <th colSpan="3" className="font-normal text-left p-0">
+                    
+                    {/* Header - พิมพ์ทุกหน้า */}
+                    <div className="flex justify-between items-start border-b border-gray-200 pb-4 mb-6 pt-2">
+                      <div className="flex gap-4 items-center">
+                        {clinicConfig?.LogoUrl && (
+                          <img src={formatImageUrl(clinicConfig.LogoUrl)} alt="Logo" className="w-16 h-16 object-contain rounded-full" />
+                        )}
+                        <div>
+                          <div className="font-bold mb-1 leading-tight flex flex-col">
+                            {clinicConfig?.ClinicName?.includes('บ้านฮักดี') ? (
+                              <React.Fragment>
+                                <span className="text-xl text-[#eec676]">บ้านฮักดี</span>
+                                <span className="text-[14px] text-gray-900">{clinicConfig.ClinicName.replace('บ้านฮักดี', '').trim()}</span>
+                              </React.Fragment>
+                            ) : (
+                              <span className="text-lg text-gray-900">{clinicConfig?.ClinicName || 'ชื่อคลินิก'}</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-600 mb-0.5">{clinicConfig?.Address || '-'}</p>
+                          <p className="text-[10px] text-gray-600">
+                            โทร. {clinicConfig?.Phone || '-'} | Line ID: {clinicConfig?.LineID || clinicConfig?.LineId || '-'} | Email: {clinicConfig?.Email || '-'}
+                          </p>
+                        </div>
+                      </div>
+                      <h2 className="text-xl font-bold text-[#eec676] pt-1 uppercase">OPD CARD</h2>
+                    </div>
+
+                    {/* Section 1: ข้อมูลผู้รับบริการ - พิมพ์ทุกหน้า */}
+                    <div className="mb-8">
+                      <h3 className="text-[14px] font-bold text-gray-800 mb-4">ส่วนที่ 1: ข้อมูลผู้รับบริการ</h3>
+                      
+                      <div className="flex flex-col gap-4 text-[12px]">
+                        <div className="flex gap-4">
+                           <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">HN:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.HN}</div></div>
+                           <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อ-สกุล:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : `${patient?.Name || ''} ${patient?.LastName || ''}`}</div></div>
+                           <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อเล่น:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Nickname}</div></div>
+                        </div>
+                        <div className="flex gap-4">
+                           <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">วัน/เดือน/ปีเกิด:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : formatThaiDate(patient?.DOB)}</div></div>
+                           <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">อายุ:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Age}</div></div>
+                           <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">เพศ:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Gender}</div></div>
+                        </div>
+                        <div className="flex gap-4">
+                           <div className="flex-[2] flex items-end"><span className="font-semibold whitespace-nowrap mr-2">ชื่อ-สกุล ผู้ปกครอง:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.ParentName}</div></div>
+                           <div className="flex-1 flex items-end"><span className="font-semibold whitespace-nowrap mr-2">โทร:</span><div className="border-b border-dotted border-gray-500 flex-1 px-2">{isBlank ? '' : patient?.Phone}</div></div>
+                           <div className="flex-1"></div>
+                        </div>
+                        <div className="flex mt-2">
+                           <span className="font-semibold whitespace-nowrap mr-2 pt-1">ประวัติการแพ้ยา:</span>
+                           <div className="border-b border-dotted border-gray-500 flex-1 px-2 leading-relaxed min-h-[24px] text-red-600">{isBlank ? '' : (patient?.Allergy || '-')}</div>
+                        </div>
+                        <div className="flex mt-2">
+                           <span className="font-semibold whitespace-nowrap mr-2 pt-1">อาการเบื้องต้น:</span>
+                           <div className="border-b border-dotted border-gray-500 flex-1 px-2 leading-relaxed min-h-[24px]">{isBlank ? '' : (patient?.Symptom || '-')}</div>
+                        </div>
+                         {isBlank && (
+                            <div className="border-b border-dotted border-gray-500 w-full mt-4 min-h-[20px]"></div>
+                         )}
+                      </div>
+                    </div>
+                  </th>
+                </tr>
+
+                {/* Section 2 Header */}
+                <tr>
+                  <th colSpan="3" className="text-left pb-2 font-bold text-[14px] pt-2">
                     ส่วนที่ 2: ประวัติการรับบริการ
                   </th>
                 </tr>
@@ -676,8 +701,8 @@
               <tfoot className="table-footer-group">
                 <tr>
                   <td colSpan="3" className="pt-6 pb-2">
-                    <div className="flex justify-end text-[11px] text-gray-500 font-medium">
-                      {isBlank ? '( HN .................................... - ............................................................ )' : `( HN: ${patient?.HN || '-'} - ${patient?.Name || ''} ${patient?.LastName || ''} )`}
+                    <div className="flex justify-end text-[12px] text-gray-600 font-medium">
+                      หน้าที่ <span className="page-number ml-1"></span>
                     </div>
                   </td>
                 </tr>
@@ -725,7 +750,16 @@
               ) : (
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg mx-auto mb-4" style={{ backgroundColor: THEME.primary }}>C</div>
               )}
-              <h1 className="text-2xl font-bold text-gray-900">{clinicConfig?.ClinicName || t.login_title}</h1>
+              <div className="font-bold text-gray-900 flex flex-col items-center">
+                {clinicConfig?.ClinicName?.includes('บ้านฮักดี') ? (
+                  <React.Fragment>
+                    <span className="text-3xl text-[#eec676] mb-1">บ้านฮักดี</span>
+                    <span className="text-lg text-gray-900">{clinicConfig.ClinicName.replace('บ้านฮักดี', '').trim()}</span>
+                  </React.Fragment>
+                ) : (
+                  <span className="text-2xl">{clinicConfig?.ClinicName || t.login_title}</span>
+                )}
+              </div>
               <p className="text-gray-500 text-sm mt-2">{t.login_sub}</p>
             </div>
 
@@ -1021,7 +1055,7 @@
       );
 
       const openAddModal = () => {
-        setEditingPatient({ HN: `HN${String(patients.length + 1).padStart(3, '0')}`, Status: 'Active', Name: '', LastName: '', Nickname: '', Gender: 'ชาย', DOB: '', Age: '', Phone: '', ParentName: '', Symptom: '', Source: '', AssignedTherapist: user.role === 'therapist' ? user.username : '' });
+        setEditingPatient({ HN: `HN${String(patients.length + 1).padStart(3, '0')}`, Status: 'Active', Name: '', LastName: '', Nickname: '', Gender: 'ชาย', DOB: '', Age: '', Phone: '', ParentName: '', Allergy: '', Symptom: '', Source: '', AssignedTherapist: user.role === 'therapist' ? user.username : '' });
         setModalOpen(true);
       };
 
@@ -1141,6 +1175,7 @@
                   <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.dob}</label><input type="date" value={editingPatient.DOB} onChange={e => setEditingPatient({...editingPatient, DOB: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
                   <div><label className="block text-xs font-medium text-gray-700 mb-1">{t.age}</label><input type="number" value={editingPatient.Age} onChange={e => setEditingPatient({...editingPatient, Age: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
                   <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.contact}</label><input required value={editingPatient.Phone} onChange={e => setEditingPatient({...editingPatient, Phone: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" /></div>
+                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">ประวัติการแพ้ยา (Allergy)</label><input type="text" value={editingPatient.Allergy || ''} onChange={e => setEditingPatient({...editingPatient, Allergy: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676]" placeholder="ระบุประวัติการแพ้ยา (ถ้ามี)" /></div>
                   <div className="col-span-1 md:col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">{t.general_info}</label><textarea rows={3} value={editingPatient.Symptom} onChange={e => setEditingPatient({...editingPatient, Symptom: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#eec676] resize-none"></textarea></div>
                 </div>
                 <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-gray-100">

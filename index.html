@@ -678,6 +678,9 @@
                               <span className="text-lg text-gray-900">{clinicConfig?.ClinicName || 'ชื่อคลินิก'}</span>
                             )}
                           </div>
+                          {clinicConfig?.LicenseNo && (
+                            <p className="text-[11px] font-semibold text-gray-800 mb-0.5">ใบอนุญาตเลขที่: {clinicConfig.LicenseNo}</p>
+                          )}
                           <p className="text-[10px] text-gray-600 mb-0.5">{clinicConfig?.Address || '-'}</p>
                           <p className="text-[10px] text-gray-600">
                             โทร. {clinicConfig?.Phone || '-'} | Line ID: {clinicConfig?.LineID || clinicConfig?.LineId || '-'} | Email: {clinicConfig?.Email || '-'}
